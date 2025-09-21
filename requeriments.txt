@@ -1,0 +1,188 @@
+import customtkinter as ctk
+from config import AZUL_PRIMARIO
+from components.layout import BaseLayout
+from tkinter import filedialog  # Necesario para seleccionar archivo
+
+
+class SubirView(ctk.CTkFrame):
+    def __init__(self, master, controlador):
+        super().__init__(master)
+        self.controlador = controlador
+
+        layout = BaseLayout(self, azul_hex=AZUL_PRIMARIO)
+        layout.pack(fill="both", expand=True)
+
+        form = layout.left_panel
+        herramientas = layout.right_panel
+
+        # 🏠 Botón de Home (arriba izquierda)
+        btn_home = ctk.CTkButton(
+            form,
+            text="🏠",
+            width=45,
+            height=45,
+            font=ctk.CTkFont(size=22),
+            corner_radius=25,
+            fg_color=AZUL_PRIMARIO,
+            hover_color="#00367d",
+            command=lambda: self.controlador.mostrar_vista("filtro"),
+        )
+        btn_home.place(relx=0.02, rely=0.02, anchor="nw")
+
+        # 💬 Botón de Chat (arriba derecha)
+        btn_chat = ctk.CTkButton(
+            form,
+            text="💬",
+            width=45,
+            height=45,
+            font=ctk.CTkFont(size=22),
+            corner_radius=25,
+            fg_color=AZUL_PRIMARIO,
+            hover_color="#00367d",
+            command=lambda: self.controlador.mostrar_vista("chat"),
+        )
+        btn_chat.place(relx=0.98, rely=0.02, anchor="ne")
+
+        # Contenedor para el formulario
+        content = ctk.CTkFrame(form, fg_color="transparent")
+        content.place(relx=0.5, rely=0.2, anchor="n")
+
+        # Título
+        title = ctk.CTkLabel(
+            content, text="SUBIR ARCHIVO", font=ctk.CTkFont(size=36, weight="bold")
+        )
+        title.pack(pady=(0, 30))
+
+        # Selector de bloque existente
+        ctk.CTkLabel(
+            content, text="Seleccionar bloque existente:", font=ctk.CTkFont(size=18)
+        ).pack(anchor="w", padx=10)
+        self.bloques_dropdown = ctk.CTkOptionMenu(
+            content,
+            values=["Bloque 1", "Bloque 2", "Bloque 3"],
+            font=ctk.CTkFont(size=16),
+            width=300,
+            fg_color=AZUL_PRIMARIO,
+            button_color=AZUL_PRIMARIO,
+        )
+        self.bloques_dropdown.pack(pady=(5, 20))
+
+        # Descripción
+        ctk.CTkLabel(content, text="Descripción:", font=ctk.CTkFont(size=18)).pack(
+            anchor="w", padx=10
+        )
+        self.descripcion_entry = ctk.CTkEntry(content, width=300)
+        self.descripcion_entry.pack(pady=(5, 20))
+
+        # Botón para seleccionar archivo Excel
+        self.archivo_boton = ctk.CTkButton(
+            content,
+            text="Seleccionar archivo Excel",
+            font=ctk.CTkFont(size=16),
+            width=220,
+            fg_color=AZUL_PRIMARIO,
+            hover_color="#00367d",
+            command=self.seleccionar_excel,
+        )
+        self.archivo_boton.pack(pady=(10, 40))
+
+        # ⬆️ Botón final "SubirView"
+        btn_subir = ctk.CTkButton(
+            form,
+            text="⬆️ Subir",
+            width=140,
+            height=50,
+            font=ctk.CTkFont(size=22, weight="bold"),
+            corner_radius=25,
+            fg_color=AZUL_PRIMARIO,
+            hover_color="#00367d",
+            command=self.subir_archivo,  # Este método lo puedes definir después
+        )
+        btn_subir.place(relx=0.5, rely=0.92, anchor="center")
+
+        # 🛠️ Contenedor de modo manual
+        manual_container = ctk.CTkFrame(herramientas, fg_color="transparent")
+        manual_container.place(relx=0.5, rely=0.1, anchor="n")
+
+        # 🔽 Seleccionar bloque
+        ctk.CTkLabel(
+            manual_container, text="Bloque destino:", font=ctk.CTkFont(size=18)
+        ).pack(anchor="w", padx=10)
+        self.manual_dropdown = ctk.CTkOptionMenu(
+            manual_container,
+            values=["Bloque 1", "Bloque 2", "Bloque 3"],
+            width=250,
+            fg_color=AZUL_PRIMARIO,
+            button_color=AZUL_PRIMARIO,
+        )
+        self.manual_dropdown.pack(pady=(5, 15))
+
+        # 📄 Campo 1: Nombre
+        ctk.CTkLabel(manual_container, text="Nombre:", font=ctk.CTkFont(size=16)).pack(
+            anchor="w", padx=10
+        )
+        self.nombre_manual_entry = ctk.CTkEntry(manual_container, width=250)
+        self.nombre_manual_entry.pack(pady=(5, 15))
+
+        # 📄 Campo 2: Edad
+        ctk.CTkLabel(manual_container, text="Edad:", font=ctk.CTkFont(size=16)).pack(
+            anchor="w", padx=10
+        )
+        self.edad_manual_entry = ctk.CTkEntry(manual_container, width=250)
+        self.edad_manual_entry.pack(pady=(5, 15))
+
+        # 📤 Botón para agregar fila
+        btn_agregar_manual = ctk.CTkButton(
+            manual_container,
+            text="Agregar fila al bloque",
+            font=ctk.CTkFont(size=16),
+            width=220,
+            fg_color=AZUL_PRIMARIO,
+            hover_color="#00367d",
+            command=self.agregar_fila_manual,
+        )
+        btn_agregar_manual.pack(pady=20)
+
+    def subir_archivo(self):
+        if hasattr(self, "ruta_excel"):
+            print("Subiendo archivo:", self.ruta_excel)
+            # Aquí irá la lógica para leer el Excel y guardar los datos
+        else:
+            print("⚠️ No se ha seleccionado ningún archivo Excel.")
+
+    def seleccionar_excel(self):
+        ruta = filedialog.askopenfilename(
+            title="Seleccionar archivo Excel",
+            filetypes=[("Archivos Excel", "*.xlsx *.xls")],
+        )
+        if ruta:
+            print("Archivo seleccionado:", ruta)
+            self.ruta_excel = ruta
+
+    def agregar_fila_manual(self):
+        nombre = self.nombre_manual_entry.get()
+        edad = self.edad_manual_entry.get()
+        bloque = self.manual_dropdown.get()
+
+        if not nombre or not edad:
+            print("⚠️ Los campos están vacíos.")
+            return
+
+        ruta = f"data/{bloque}.xlsx"
+
+        try:
+            import openpyxl
+
+            if not os.path.exists(ruta):
+                wb = openpyxl.Workbook()
+                ws = wb.active
+                ws.append(["Nombre", "Edad"])
+            else:
+                wb = openpyxl.load_workbook(ruta)
+                ws = wb.active
+
+            ws.append([nombre, edad])
+            wb.save(ruta)
+            print(f"Fila agregada al bloque '{bloque}':", nombre, edad)
+        except Exception as e:
+            print("❌ Error al escribir el archivo:", e)
