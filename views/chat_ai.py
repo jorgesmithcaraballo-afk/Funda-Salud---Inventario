@@ -23,7 +23,7 @@ TEXT_SECONDARY = "#757575"    # Material Text Secondary
 SUCCESS_GREEN = "#4caf50"     # Material Green 500
 ACCENT_TEAL = "#009688"       # Material Teal 500
 
-class WhatsAppChatApp(ctk.CTk):
+class ChatAIView(ctk.CTk):
     """Main WhatsApp-style chat application for inventory management"""
     
     def __init__(self):
