@@ -5,13 +5,12 @@ Updated with 10 comprehensive inventory queries and mock data support
 """
 
 import google.generativeai as genai
-from conexion import obtener_conexion
 import json
 import time
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from models.inventory_models import InventoryQuery, QueryResult, AIServiceConfig, QueryType
-from services.mock_data import get_mock_inventory_data, get_formatted_response_data
+from services.inventory_queries import InventoryQueries
 
 
 class ResponseFormatter:
@@ -71,31 +70,52 @@ class ResponseFormatter:
         items = []
         
         for i, item in enumerate(items_to_show, 1):
-            # Smart field selection based on query type
-            if query_type in ["low_stock", "urgent_restock", "out_of_stock"]:
+            # Smart field selection based on query type - clean formatting
+            if query_type in ["stock_bajo", "sin_stock"]:
                 desc = item.get('descripcion', item.get('producto', 'Producto'))
-                stock = item.get('stock_actual', item.get('stock', 'N/A'))
-                items.append(f"• **{desc}** - Stock: {stock}")
+                stock = item.get('existencia_final', item.get('stock', 'N/A'))
+                precio = item.get('costo_unitario', 0)
+                items.append(f"• {desc}\n  Stock: {stock} | Precio: ${precio:.2f}")
                 
-            elif query_type in ["expiring_soon", "expired_products"]:
-                desc = item.get('descripcion', item.get('producto', 'Producto'))
-                fecha = item.get('fecha_vencimiento', item.get('fecha', 'N/A'))
-                items.append(f"• **{desc}** - Vence: {fecha}")
+            elif query_type == "valor_inventario":
+                desc = item.get('tipo', item.get('producto', 'Total'))
+                valor = item.get('valor_total', item.get('monto_final', 'N/A'))
+                if desc == 'TOTAL':
+                    items.append(f"• VALOR TOTAL INVENTARIO: ${valor:.2f}")
+                else:
+                    items.append(f"• {desc}: ${valor:.2f}")
                 
-            elif query_type == "inventory_value":
-                costo = item.get('valor_costo', item.get('costo_total', 'N/A'))
-                venta = item.get('valor_venta', item.get('venta_total', 'N/A'))
-                items.append(f"• **Costo total:** ${costo:,} | **Venta:** ${venta:,}")
+            elif query_type in ["mas_entradas", "mas_salidas"]:
+                desc = item.get('producto', 'Producto')
+                cantidad = item.get('cant_entrada', item.get('cant_salida', 'N/A'))
+                monto = item.get('monto_entrada', item.get('monto_salida', 'N/A'))
+                items.append(f"• {desc}\n  Cantidad: {cantidad} | Monto: ${monto:.2f}")
                 
-            elif query_type in ["top_selling", "low_rotation"]:
-                desc = item.get('descripcion', item.get('producto', 'Producto'))
-                ventas = item.get('ventas_totales', item.get('ventas_mes', 'N/A'))
-                items.append(f"• **{desc}** - Ventas: {ventas}")
+            elif query_type in ["monto_entradas", "monto_salidas"]:
+                tipo = item.get('tipo', 'Item')
+                monto = item.get('monto_total_entradas', item.get('monto_total_salidas', 'N/A'))
+                if 'TOTAL' in tipo:
+                    items.append(f"• {tipo}: ${monto:.2f}")
+                else:
+                    items.append(f"• {tipo}: ${monto:.2f}")
+                
+            elif query_type == "sin_movimiento":
+                desc = item.get('producto', 'Producto')
+                inicial = item.get('cant_inicial', 0)
+                final = item.get('existencia_final', 0)
+                items.append(f"• {desc}\n  Stock inicial: {inicial} | Stock final: {final}")
+                
+            elif query_type == "variacion_stock":
+                desc = item.get('producto', 'Producto')
+                inicial = item.get('cant_inicial', 0)
+                final = item.get('cant_final', 0)
+                variacion = item.get('variacion_unidades', 0)
+                items.append(f"• {desc}\n  Inicial: {inicial} | Final: {final} | Variación: {variacion:+}")
                 
             else:
                 # Generic format
                 desc = item.get('descripcion', item.get('producto', f'Item {i}'))
-                items.append(f"• **{desc}**")
+                items.append(f"• {desc}")
         
         # Add "more items" indicator if needed
         if len(data) > 5:
@@ -105,21 +125,28 @@ class ResponseFormatter:
     
     @staticmethod
     def _get_smart_recommendation(query_type: str, item_count: int) -> str:
-        """Generate smart recommendation based on query type"""
+        """Generate smart recommendation based on query type for inventory management"""
         recommendations = {
-            "low_stock": "🚨 **Acción Urgente:** Reabastecer productos con stock bajo para evitar desabastecimiento. Contactar proveedores y programar pedidos inmediatos. Revisar frecuencias de pedido.",
-            "urgent_restock": "⚡ **Crítico:** Contactar proveedores inmediatamente para restock crítico. Priorizar estos productos en próximos pedidos para evitar pérdida de ventas.",
-            "expiring_soon": "⏰ **Acción Inmediata:** Aplicar descuentos o promociones antes del vencimiento. Implementar estrategia FEFO (First Expired, First Out) para rotación.",
-            "expired_products": "❌ **Crítico:** Retirar productos vencidos del inventario inmediatamente. Documentar pérdidas y revisar procesos de rotación de stock.",
-            "out_of_stock": "🚫 **Urgente:** Restablecer stock de productos agotados para evitar pérdida de ventas. Evaluar demanda histórica para ajustar niveles mínimos.",
-            "top_selling": "🏆 **Oportunidad:** Aumentar stock de productos top para maximizar ventas. Negociar mejores precios por volumen con proveedores.",
-            "low_rotation": "🐌 **Estrategia:** Revisar precios y marketing de productos de baja rotación. Considerar liquidación o cambios en la estrategia comercial.",
-            "inventory_value": "💰 **Análisis:** Monitorear el valor total para optimizar capital de trabajo. Balancear niveles de inventario con flujo de caja.",
-            "price_changes": "📈 **Seguimiento:** Evaluar impacto de cambios de precio en las ventas. Monitorear competencia y ajustar estrategia de precios.",
-            "excess_stock": "📦 **Optimización:** Reducir exceso de stock para liberar capital. Implementar promociones o renegociar con proveedores."
+            "stock_bajo": "🚨 Acción Urgente:\nReabastecer productos con stock bajo para evitar desabastecimiento.\n\nPasos inmediatos:\n• Contactar proveedores de estos productos\n• Programar pedidos de emergencia\n• Revisar puntos de reorden\n• Considerar proveedores alternativos",
+            
+            "sin_stock": "🚫 Crítico - Stock Agotado:\nRestablecer inventario de productos agotados inmediatamente.\n\nAcciones requeridas:\n• Contactar proveedores urgentemente\n• Evaluar demanda perdida\n• Ajustar niveles mínimos de stock\n• Implementar alertas tempranas",
+            
+            "valor_inventario": "💰 Análisis Financiero:\nMonitorear el valor total para optimizar capital de trabajo.\n\nRevisiones sugeridas:\n• Productos de alto valor con baja rotación\n• Oportunidades de negociación con proveedores\n• Balance entre liquidez y disponibilidad\n• Análisis costo-beneficio del inventario",
+            
+            "mas_entradas": "📈 Control de Entradas:\nRevisar patrones de abastecimiento para optimizar compras.\n\nRecomendaciones:\n• Verificar si las cantidades corresponden a la demanda\n• Evaluar costos de almacenamiento\n• Negociar mejores términos con proveedores principales\n• Planificar compras basadas en tendencias",
+            
+            "mas_salidas": "🏆 Productos Exitosos:\nCapitalizar productos con alta demanda.\n\nEstrategias:\n• Asegurar stock suficiente de productos estrella\n• Negociar mejores precios por volumen\n• Evaluar oportunidades de expansión\n• Mantener niveles óptimos de seguridad",
+            
+            "monto_entradas": "📊 Gestión de Compras:\nAnalizar inversión en inventario para optimizar flujo de caja.\n\nAcciones:\n• Revisar términos de pago con proveedores\n• Evaluar frecuencia vs volumen de compra\n• Considerar descuentos por pronto pago\n• Planificar compras según estacionalidad",
+            
+            "monto_salidas": "💵 Análisis de Ventas:\nOptimizar ingresos basándose en patrones de salida.\n\nEstrategias:\n• Mantener stock de productos de alto movimiento\n• Evaluar márgenes de productos top\n• Implementar promociones cruzadas\n• Ajustar precios según rotación",
+            
+            "sin_movimiento": "💤 Inventario Inactivo:\nAbordar productos sin movimiento para liberar capital.\n\nPlan de acción:\n• Evaluar viabilidad de estos productos\n• Considerar liquidación con descuentos\n• Revisar política de devoluciones a proveedores\n• Replantear mix de productos",
+            
+            "variacion_stock": "🔄 Control de Inventario:\nAnalizar variaciones para mejorar planificación.\n\nAcciones de seguimiento:\n• Identificar patrones de consumo\n• Ajustar puntos de reorden\n• Mejorar pronósticos de demanda\n• Optimizar niveles de stock máximo y mínimo"
         }
         
-        return recommendations.get(query_type, "💡 **Recomendación:** Revisar datos regularmente para optimizar inventario y mejorar la gestión de stock.")
+        return recommendations.get(query_type, "💡 Recomendación General:\nRevisar datos regularmente para optimizar inventario y mejorar la gestión operativa del stock.")
 
 
 class InventoryAIService:
@@ -134,7 +161,6 @@ class InventoryAIService:
         """
         self._config = config
         self._model = None
-        self._use_mock_data = True  # Toggle between mock and real database
         
         if config.api_key and config.api_key != "TU_API_KEY_AQUI":
             self._initialize_ai_model(config.api_key)
@@ -183,116 +209,106 @@ class InventoryAIService:
             genai.configure(api_key=api_key)
             self._model = genai.GenerativeModel('gemini-1.5-flash-8b')
         except Exception as e:
-            print(f"Error initializing AI model: {e}")
+            print(f"⚠️ AI no disponible: {e}")
             self._config.is_configured = False
     
     def get_predefined_queries(self) -> Dict[str, InventoryQuery]:
         """
-        Get predefined system queries - 10 inventory questions
+        Get predefined system queries - 9 inventory questions based on real table structure
         
         Returns:
-            Dictionary with the 10 main system queries
+            Dictionary with the 9 main system queries + 1 free search
         """
         
         queries = {
-            QueryType.LOW_STOCK: InventoryQuery(
-                query_type=QueryType.LOW_STOCK,
-                title="¿Qué productos necesitan restock urgente?",
-                icon="", 
+            QueryType.STOCK_BAJO: InventoryQuery(
+                query_type=QueryType.STOCK_BAJO,
+                title="📉 Stock Bajo",
+                icon="📉", 
                 color="#dc3545",
-                description="Productos próximos a agotarse",
-                sql_query="SELECT * FROM Inventario WHERE stock_actual <= stock_minimo ORDER BY (stock_actual/stock_minimo) ASC",
-                user_prompt="¿Qué productos están próximos a agotarse y necesitan reabastecimiento urgente?"
+                description="¿Qué productos tienen stock bajo?",
+                sql_query="",  # Handled by InventoryQueries
+                user_prompt="¿Qué productos tienen stock bajo (5 unidades o menos)?"
             ),
             
-            QueryType.EXPIRING_SOON: InventoryQuery(
-                query_type=QueryType.EXPIRING_SOON,
-                title="¿Qué productos vencen en los próximos 30 días?",
-                icon="",
-                color="#f39c12",
-                description="Productos con vencimiento cercano (próximos 30 días)",
-                sql_query="SELECT * FROM Inventario WHERE fecha_vencimiento BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) ORDER BY fecha_vencimiento ASC",
-                user_prompt="¿Qué productos tienen fecha de vencimiento cercana?"
-            ),
-            
-            QueryType.EXPIRED_PRODUCTS: InventoryQuery(
-                query_type=QueryType.EXPIRED_PRODUCTS,
-                title="¿Qué productos ya están vencidos?",
-                icon="",
-                color="#c0392b",
-                description="Productos ya vencidos",
-                sql_query="SELECT * FROM Inventario WHERE fecha_vencimiento < CURDATE() ORDER BY fecha_vencimiento ASC",
-                user_prompt="¿Qué productos ya están vencidos?"
-            ),
-            
-            QueryType.TOP_SELLING: InventoryQuery(
-                query_type=QueryType.TOP_SELLING,
-                title="¿Cuáles son los productos más vendidos?",
-                icon="",
-                color="#27ae60",
-                description="Productos más vendidos (último mes/trimestre)",
-                sql_query="SELECT p.*, SUM(s.cantidad) as ventas_totales FROM Inventario p JOIN salidas s ON p.id = s.inventario_id WHERE s.fecha >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH) GROUP BY p.id ORDER BY ventas_totales DESC LIMIT 10",
-                user_prompt="¿Cuáles son los productos más vendidos en el último período?"
-            ),
-            
-            QueryType.LOW_ROTATION: InventoryQuery(
-                query_type=QueryType.LOW_ROTATION,
-                title="¿Qué productos tienen baja rotación de ventas?",
-                icon="", 
-                color="#95a5a6",
-                description="Productos con baja rotación",
-                sql_query="SELECT * FROM Inventario WHERE id NOT IN (SELECT DISTINCT inventario_id FROM salidas WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)) ORDER BY cantidad DESC",
-                user_prompt="¿Cuáles son los productos con baja rotación?"
-            ),
-            
-            QueryType.INVENTORY_VALUE: InventoryQuery(
-                query_type=QueryType.INVENTORY_VALUE,
-                title="¿Cuál es el valor total del inventario?",
-                icon="",
-                color="#3498db", 
-                description="Valor total (costo y venta)",
-                sql_query="SELECT SUM(cantidad * costo_unitario) as valor_costo, SUM(cantidad * precio_venta) as valor_venta FROM Inventario",
-                user_prompt="¿Cuál es el valor total actual del inventario?"
-            ),
-            
-            QueryType.PRICE_CHANGES: InventoryQuery(
-                query_type=QueryType.PRICE_CHANGES,
-                title="¿Qué productos cambiaron de precio recientemente?",
-                icon="",
-                color="#9b59b6",
-                description="Cambios de precio recientes",
-                sql_query="SELECT * FROM Inventario WHERE fecha_ultimo_cambio_precio >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH) ORDER BY fecha_ultimo_cambio_precio DESC",
-                user_prompt="¿Qué productos han cambiado de precio recientemente?"
-            ),
-            
-            QueryType.EXCESS_STOCK: InventoryQuery(
-                query_type=QueryType.EXCESS_STOCK,
-                title="¿Qué productos tienen exceso de inventario?",
-                icon="",
-                color="#e67e22",
-                description="Productos con exceso de stock",
-                sql_query="SELECT *, (stock_actual - stock_minimo) as exceso FROM Inventario WHERE stock_actual > stock_minimo * 3 ORDER BY exceso DESC",
-                user_prompt="¿Qué productos tienen exceso de stock?"
-            ),
-            
-            QueryType.OUT_OF_STOCK: InventoryQuery(
-                query_type=QueryType.OUT_OF_STOCK,
-                title="¿Qué productos están completamente agotados?",
-                icon="",
+            QueryType.SIN_STOCK: InventoryQuery(
+                query_type=QueryType.SIN_STOCK,
+                title="❌ Sin Stock",
+                icon="❌",
                 color="#721c24",
-                description="Productos agotados",
-                sql_query="SELECT * FROM Inventario WHERE stock_actual = 0",
-                user_prompt="¿Qué productos están agotados?"
+                description="¿Qué productos están agotados?",
+                sql_query="",  # Handled by InventoryQueries
+                user_prompt="¿Qué productos están completamente agotados?"
             ),
             
-            QueryType.URGENT_RESTOCK: InventoryQuery(
-                query_type=QueryType.URGENT_RESTOCK,
-                title="¿Qué productos requieren pedido inmediato?",
-                icon="", 
-                color="#d63384",
-                description="Productos que requieren reabastecimiento inmediato",
-                sql_query="SELECT * FROM Inventario WHERE stock_actual <= stock_minimo AND stock_actual > 0 ORDER BY stock_actual ASC",
-                user_prompt="¿Qué productos requieren reabastecimiento inmediato?"
+            QueryType.VALOR_INVENTARIO: InventoryQuery(
+                query_type=QueryType.VALOR_INVENTARIO,
+                title="💰 Valor Inventario",
+                icon="💰",
+                color="#3498db", 
+                description="¿Cuál es el valor total del inventario?",
+                sql_query="",  # Handled by InventoryQueries
+                user_prompt="¿Cuál es el valor total actual del inventario y cuáles son los productos más valiosos?"
+            ),
+            
+            QueryType.MAS_ENTRADAS: InventoryQuery(
+                query_type=QueryType.MAS_ENTRADAS,
+                title="⏰ Más Entradas",
+                icon="⏰",
+                color="#28a745",
+                description="¿Qué productos tuvieron más entradas?",
+                sql_query="",  # Handled by InventoryQueries
+                user_prompt="¿Qué productos tuvieron más entradas de mercancía?"
+            ),
+            
+            QueryType.MAS_SALIDAS: InventoryQuery(
+                query_type=QueryType.MAS_SALIDAS,
+                title="🏆 Más Salidas",
+                icon="🏆",
+                color="#fd7e14",
+                description="¿Qué productos tuvieron más salidas?",
+                sql_query="",  # Handled by InventoryQueries
+                user_prompt="¿Qué productos tuvieron más salidas (ventas)?"
+            ),
+            
+            QueryType.MONTO_ENTRADAS: InventoryQuery(
+                query_type=QueryType.MONTO_ENTRADAS,
+                title="📦 Monto Entradas",
+                icon="📦",
+                color="#17a2b8",
+                description="¿Cuál es el monto total de entradas?",
+                sql_query="",  # Handled by InventoryQueries
+                user_prompt="¿Cuál es el monto total de entradas y cuáles fueron las mayores?"
+            ),
+            
+            QueryType.MONTO_SALIDAS: InventoryQuery(
+                query_type=QueryType.MONTO_SALIDAS,
+                title="🚚 Monto Salidas",
+                icon="🚚",
+                color="#6f42c1",
+                description="¿Cuál es el monto total de salidas?",
+                sql_query="",  # Handled by InventoryQueries
+                user_prompt="¿Cuál es el monto total de salidas y cuáles fueron las mayores?"
+            ),
+            
+            QueryType.SIN_MOVIMIENTO: InventoryQuery(
+                query_type=QueryType.SIN_MOVIMIENTO,
+                title="💤 Sin Movimiento",
+                icon="💤",
+                color="#6c757d",
+                description="¿Qué productos no tuvieron movimientos?",
+                sql_query="",  # Handled by InventoryQueries
+                user_prompt="¿Qué productos no tuvieron movimientos (sin entradas ni salidas)?"
+            ),
+            
+            QueryType.VARIACION_STOCK: InventoryQuery(
+                query_type=QueryType.VARIACION_STOCK,
+                title="🔄 Variación Stock",
+                icon="🔄",
+                color="#e83e8c",
+                description="¿Cuál fue la variación de stock?",
+                sql_query="",  # Handled by InventoryQueries
+                user_prompt="¿Cuál fue la variación de stock de los productos?"
             )
         }
         
@@ -301,30 +317,16 @@ class InventoryAIService:
     
     def execute_sql_query(self, sql_query: str) -> List[Dict]:
         """
-        Execute SQL query and return results
+        DEPRECATED: Use InventoryQueries methods instead
+        Kept for backwards compatibility
         
         Args:
-            sql_query: SQL query to execute
+            sql_query: SQL query to execute (ignored)
             
         Returns:
-            List of dictionaries with query results
+            Empty list - use InventoryQueries instead
         """
-        if self._use_mock_data:
-            # For now, return mock data instead of executing real queries
-            # This will be updated to real database queries later
-            return []  # Mock data is handled separately
-        
-        try:
-            conn = obtener_conexion()
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute(sql_query)
-            results = cursor.fetchall()
-            cursor.close()
-            conn.close()
-            return results
-        except Exception as e:
-            print(f"Error executing SQL: {e}")
-            return []
+        return []
     
     def generate_ai_response(self, user_prompt: str, data: List[Dict], query_type: str = "general") -> str:
         """
@@ -392,6 +394,141 @@ class InventoryAIService:
         # Use ResponseFormatter for consistent output even without AI
         return ResponseFormatter.format(data, user_prompt, query_type)
     
+    def search_specific_product(self, search_term: str) -> QueryResult:
+        """Search for a specific product by ID or description using InventoryQueries"""
+        start_time = time.time()
+        
+        try:
+            search_term = search_term.strip()
+            
+            if not search_term:
+                return QueryResult(
+                    success=False,
+                    data=[],
+                    error_message="❌ Debe ingresar un ID o descripción de producto"
+                )
+            
+            sql_data = InventoryQueries.search_product(search_term)
+            
+            if not sql_data:
+                return QueryResult(
+                    success=False,
+                    data=[],
+                    error_message=f"❌ No se encontró ningún producto con '{search_term}'"
+                )
+            
+            ai_response = self._generate_product_detail_response(sql_data, search_term)
+            execution_time = time.time() - start_time
+            
+            return QueryResult(
+                success=True,
+                data=sql_data,
+                ai_response=ai_response,
+                execution_time=execution_time
+            )
+            
+        except Exception as e:
+            return QueryResult(
+                success=False,
+                data=[],
+                error_message=f"❌ Error buscando producto: {str(e)}",
+                execution_time=time.time() - start_time
+            )
+    
+    def _generate_product_detail_response(self, data: List[Dict], search_term: str) -> str:
+        """
+        Generate detailed product information response
+        
+        Args:
+            data: Product data from database
+            search_term: Original search term
+            
+        Returns:
+            Formatted product detail response
+        """
+        if not data:
+            return f"❌ No se encontraron productos para '{search_term}'"
+        
+        if len(data) == 1:
+            # Single product - detailed view
+            product = data[0]
+            
+            response = f"""📋 Ficha Detallada: {product['producto']}
+
+🆔 ID: C-{product['id']}
+💰 Costo Unitario: ${product['costo_unitario']:.2f}
+
+📊 Movimientos:
+• Existencia inicial: {product['cant_inicial']} unidades (Monto: ${product['monto_inicial']:.2f})
+• Entradas: {product['cant_entrada']} unidades (Monto: ${product['monto_entrada']:.2f})
+• Salidas: {product['cant_salida']} unidades (Monto: ${product['monto_salida']:.2f})
+• Existencia final: {product['cant_final']} unidades (Monto: ${product['monto_final']:.2f})
+
+💡 Recomendación:
+{self._get_product_recommendation(product)}"""
+            
+        else:
+            # Multiple products - summary view
+            response = f"📊 Resultados para '{search_term}': {len(data)} producto(s)\n\n"
+            
+            for i, product in enumerate(data, 1):
+                status = "✅ Disponible" if product['cant_final'] > 0 else "❌ Agotado"
+                response += f"• {product['producto']} (ID: C-{product['id']})\n  Stock: {product['cant_final']} unidades - {status}\n\n"
+            
+            response += "💡 Tip: Busca por ID específico para ver detalles completos"
+        
+        return response
+
+    def _get_product_recommendation(self, product: Dict[str, Any]) -> str:
+        """
+        Generate specific recommendation for a single product based on inventory data
+        
+        Args:
+            product: Product data dictionary
+            
+        Returns:
+            Recommendation string
+        """
+        cant_final = product.get('cant_final', 0)
+        cant_inicial = product.get('cant_inicial', 0)
+        cant_entrada = product.get('cant_entrada', 0)
+        cant_salida = product.get('cant_salida', 0)
+        
+        # Calculate movement patterns
+        has_entries = cant_entrada > 0
+        has_exits = cant_salida > 0
+        stock_change = cant_final - cant_inicial
+        
+        # Generate specific recommendation based on product status
+        if cant_final == 0:
+            if has_exits and not has_entries:
+                return "Este producto está completamente agotado y tuvo salidas sin reposición. Considera realizar una compra urgente si es un producto de alta demanda."
+            elif not has_entries and not has_exits:
+                return "Producto sin movimiento y sin stock. Evalúa si debe mantenerse en inventario o descatalogarse."
+            else:
+                return "Producto agotado. Revisa la demanda histórica y programa reposición según necesidades."
+        
+        elif cant_final <= 3:
+            return f"Stock crítico ({cant_final} unidades). Programa reposición inmediata para evitar desabastecimiento."
+        
+        elif cant_final <= 10:
+            if has_exits:
+                return f"Stock bajo ({cant_final} unidades) con movimiento activo. Programa reposición en los próximos días."
+            else:
+                return f"Stock bajo ({cant_final} unidades) sin movimiento reciente. Monitorea demanda antes de reponer."
+        
+        elif stock_change > 0 and has_exits:
+            return f"Producto con buen movimiento (stock aumentó en {stock_change} unidades). Mantén niveles óptimos de inventario."
+        
+        elif not has_entries and not has_exits:
+            return f"Producto sin movimiento con {cant_final} unidades en stock. Considera estrategias para rotarlo o evaluar su continuidad."
+        
+        elif has_entries and not has_exits:
+            return f"Producto con entradas recientes pero sin salidas. Implementa estrategias de promoción o verifica demanda del mercado."
+        
+        else:
+            return f"Producto con stock estable ({cant_final} unidades). Mantén monitoreo regular y ajusta según patrones de demanda."
+
     def process_query(self, query_key: str) -> QueryResult:
         """
         Process complete query (Data + AI Analysis)
@@ -416,11 +553,8 @@ class InventoryAIService:
             
             query = queries[query_key]
             
-            # 1. Get data (mock for now, will be SQL later)
-            if self._use_mock_data:
-                sql_data = get_mock_inventory_data(query_key)
-            else:
-                sql_data = self.execute_sql_query(query.sql_query)
+            # Get data using centralized queries
+            sql_data = InventoryQueries.get_query_data(query_key)
             
             # 2. Generate AI response with query type for smart formatting
             ai_response = self.generate_ai_response(query.user_prompt, sql_data, query_key)
@@ -454,7 +588,7 @@ class InventoryAIService:
             "api_key_present": self._config.api_key is not None,
             "model": self._config.model_name if self._config.is_configured else None,
             "available_queries": len(self.get_predefined_queries()),
-            "using_mock_data": self._use_mock_data
+            "database_mode": "real_data"
         }
 
 

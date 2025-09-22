@@ -1,5 +1,7 @@
 import customtkinter as ctk
 from conexion import obtener_conexion
+from colors import (HEADER_BG, VIEW_BACKGROUND, LIGHT_GRAY, WHITE)
+from icons import *
 from tkinter import messagebox
 
 class SubirView(ctk.CTkFrame):
@@ -8,20 +10,20 @@ class SubirView(ctk.CTkFrame):
         self.controlador = controlador
         self.configure(fg_color="white")
 
-        # 🔷 Encabezado azul
-        header = ctk.CTkFrame(self, fg_color="#00367d")
+        # 🔷 Encabezado con colores unificados
+        header = ctk.CTkFrame(self, fg_color=HEADER_BG)
         header.place(relx=0.5, rely=0.0, relwidth=1, relheight=0.15, anchor="n")
 
         ctk.CTkLabel(header, text="AGREGAR TRABAJO", font=ctk.CTkFont(size=28, weight="bold"), text_color="white").place(relx=0.5, rely=0.5, anchor="center")
 
-        btn_home = ctk.CTkButton(header, text="🏠", width=45, height=45, font=ctk.CTkFont(size=22),
+        btn_home = ctk.CTkButton(header, text=ICON_HOME, width=45, height=45, font=ctk.CTkFont(size=22),
             corner_radius=25, fg_color="white", text_color="black", hover_color="#cccccc",
             command=lambda: self.controlador.mostrar_vista("filtro"))
         btn_home.place(relx=0.02, rely=0.5, anchor="w")
 
-        btn_chat = ctk.CTkButton(header, text="💬", width=45, height=45, font=ctk.CTkFont(size=22),
+        btn_chat = ctk.CTkButton(header, text=ICON_CHAT, width=45, height=45, font=ctk.CTkFont(size=22),
             corner_radius=25, fg_color="white", text_color="black", hover_color="#cccccc",
-            command=lambda: self.controlador.mostrar_vista("chat"))
+            command=lambda: self.controlador.mostrar_vista("chat_ai", vista_anterior="subir"))
         btn_chat.place(relx=0.98, rely=0.5, anchor="e")
 
         # Scrollable formulario

@@ -7,17 +7,17 @@ from enum import Enum
 
 
 class QueryType(Enum):
-    """Enumeration of predefined inventory query types"""
-    LOW_STOCK = "low_stock"
-    EXPIRING_SOON = "expiring_soon" 
-    EXPIRED_PRODUCTS = "expired_products"
-    TOP_SELLING = "top_selling"
-    LOW_ROTATION = "low_rotation"
-    INVENTORY_VALUE = "inventory_value"
-    PRICE_CHANGES = "price_changes"
-    EXCESS_STOCK = "excess_stock"
-    OUT_OF_STOCK = "out_of_stock"
-    URGENT_RESTOCK = "urgent_restock"
+    """Enumeration of predefined inventory query types based on real data structure"""
+    STOCK_BAJO = "stock_bajo"  # Stock Bajo - Existencia Final ≤ umbral
+    SIN_STOCK = "sin_stock"    # Sin Stock - Existencia Final = 0
+    VALOR_INVENTARIO = "valor_inventario"  # Valor Total del Inventario - SUMA(O)
+    MAS_ENTRADAS = "mas_entradas"  # Más Entradas - ordenar por Monto Total Entradas (I)
+    MAS_SALIDAS = "mas_salidas"   # Más Salidas - ordenar por Monto Total Salidas (L)
+    MONTO_ENTRADAS = "monto_entradas"  # Monto Total Entradas - SUMA(I)
+    MONTO_SALIDAS = "monto_salidas"    # Monto Total Salidas - SUMA(L)
+    SIN_MOVIMIENTO = "sin_movimiento"  # Sin Movimiento - Entradas (G) = 0 y Salidas (J) = 0
+    VARIACION_STOCK = "variacion_stock"  # Variación de Stock - Final (M) – Inicial (E)
+    PRODUCTO_LIBRE = "producto_libre"    # Pregunta Libre - buscar por ID o descripción
 
 
 @dataclass

@@ -79,6 +79,43 @@ class ChatController:
         )
         thread.start()
     
+    def search_product_async(self, search_term: str) -> None:
+        """
+        Search for a specific product by ID or description
+        
+        Args:
+            search_term: ID or description to search for
+        """
+        if self._on_query_started:
+            self._on_query_started()
+        
+        # Execute in background thread
+        thread = threading.Thread(
+            target=self._process_product_search_background,
+            args=(search_term,),
+            daemon=True
+        )
+        thread.start()
+    
+    def _process_product_search_background(self, search_term: str) -> None:
+        """
+        Process product search in background thread
+        
+        Args:
+            search_term: Product search term
+        """
+        try:
+            result = self._ai_service.search_specific_product(search_term)
+            
+            if result.success and self._on_query_completed:
+                self._on_query_completed(result)
+            elif not result.success and self._on_query_error:
+                self._on_query_error(result.error_message or "No se encontró el producto")
+                
+        except Exception as e:
+            if self._on_query_error:
+                self._on_query_error(f"Error en búsqueda: {str(e)}")
+    
     def _process_query_background(self, query_key: str) -> None:
         """
         Process query in background thread
