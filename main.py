@@ -3,10 +3,11 @@ from views.filtro import FiltroView
 from views.login import LoginView
 from views.subir import SubirView
 from config import AZUL_PRIMARIO
-from views.chat import ChatView
+from views.chat_ai import ChatView
 from tkinter import filedialog
 import customtkinter as ctk
 import os
+
 
 ICON_PATH = os.path.join("img", "icono.ico")
 
@@ -31,7 +32,7 @@ class App(ctk.CTk):
         # Registro de vistas
         self.registrar_vista("login", LoginView)
         self.registrar_vista("filtro", FiltroView)
-        self.registrar_vista("chat", ChatView)
+        self.registrar_vista("chat_ai", chat_ai)
         self.registrar_vista("subir", SubirView)
         self.registrar_vista("configuracion", ConfiguracionView)
 
