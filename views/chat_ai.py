@@ -9,30 +9,25 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 from controllers.chat_controller import ChatController
 from models.inventory_models import QueryResult
+from colors import (HEADER_BG, HEADER_TEXT, LIGHT_GRAY, VIEW_BACKGROUND, WHITE, 
+                   PRIMARY_BLUE, PRIMARY_BLUE_DARK, INPUT_BG, INPUT_BORDER, INPUT_TEXT,
+                   BUTTON_SUCCESS_BG, BUTTON_SUCCESS_HOVER, BUTTON_SUCCESS_TEXT,
+                   get_header_button_style)
+from icons import *
 
 # AI Configuration - PUT YOUR GEMINI API KEY HERE
 API_KEY = "AIzaSyBWx-YLBoGowxRBJqO-oenJX3aeZ9J9Zvg"
 
-# Material Design Color Palette
-PRIMARY_BLUE = "#1976d2"      # Material Blue 700
-LIGHT_BLUE = "#bbdefb"        # Material Blue 100
-SURFACE_WHITE = "#ffffff"     # Material Surface
-BACKGROUND_GREY = "#f5f5f5"   # Material Background
-TEXT_PRIMARY = "#212121"      # Material Text Primary
-TEXT_SECONDARY = "#757575"    # Material Text Secondary
-SUCCESS_GREEN = "#4caf50"     # Material Green 500
-ACCENT_TEAL = "#009688"       # Material Teal 500
-
-class ChatAIView(ctk.CTk):
+class ChatAIView(ctk.CTkFrame):
     """Main WhatsApp-style chat application for inventory management"""
     
-    def __init__(self):
-        super().__init__()
+    def __init__(self, master, controlador):
+        super().__init__(master)
+        self.controlador = controlador
+        self.previous_view = "filtro"  # Vista anterior por defecto
         
-        # Window configuration
-        self.title("🤖 Chat IA - Sistema de Inventario")
-        self.geometry("800x700")
-        self.resizable(True, True)
+        # Frame configuration using unified colors
+        self.configure(fg_color=LIGHT_GRAY)
         
         # Chat state - simplified without product-specific mode
         self.current_mode = "general"  # Always general mode
@@ -63,8 +58,8 @@ class ChatAIView(ctk.CTk):
     def _setup_ui(self) -> None:
         """Setup the WhatsApp-style chat UI"""
         
-        # Material Design Header
-        header_frame = ctk.CTkFrame(self, fg_color=PRIMARY_BLUE, height=70)
+        # Header unificado con botón de regreso
+        header_frame = ctk.CTkFrame(self, fg_color=HEADER_BG, height=70)
         header_frame.pack(fill="x", padx=0, pady=0)
         header_frame.pack_propagate(False)
         
@@ -72,13 +67,24 @@ class ChatAIView(ctk.CTk):
         header_content = ctk.CTkFrame(header_frame, fg_color="transparent")
         header_content.pack(expand=True, fill="both", padx=20, pady=15)
         
+        # Botón de flecha atrás (izquierda)
+        back_button_style = get_header_button_style()
+        self.back_button = ctk.CTkButton(
+            header_content,
+            text=ICON_BACK_ARROW,
+            command=self.go_back,
+            **back_button_style
+        )
+        self.back_button.pack(side="left", anchor="w")
+        
+        # Título centrado
         title_label = ctk.CTkLabel(
             header_content,
             text="🤖 Asistente IA - Inventario",
             font=ctk.CTkFont(size=20, weight="bold"),
-            text_color="white"
+            text_color=HEADER_TEXT
         )
-        title_label.pack(side="left")
+        title_label.pack(side="left", expand=True, padx=(20, 0))
         
         # AI status
         status_text = "🟢 IA Activa" if self._chat_controller.is_ai_configured() else "🟡 IA Básica"
@@ -86,7 +92,7 @@ class ChatAIView(ctk.CTk):
             header_content,
             text=status_text,
             font=ctk.CTkFont(size=12),
-            text_color="white"
+            text_color=HEADER_TEXT
         )
         status_label.pack(side="right")
         
@@ -99,16 +105,16 @@ class ChatAIView(ctk.CTk):
     def _setup_chat_area(self) -> None:
         """Setup the scrollable chat messages area"""
         
-        # Material Design Chat Container
-        chat_container = ctk.CTkFrame(self, fg_color=SURFACE_WHITE)
+        # Chat Container con colores unificados
+        chat_container = ctk.CTkFrame(self, fg_color=WHITE)
         chat_container.pack(fill="both", expand=True, padx=0, pady=0)
         
-        # Material Design Scrollable Chat Frame
+        # Scrollable Chat Frame
         self.chat_scrollable = ctk.CTkScrollableFrame(
             chat_container,
-            fg_color=SURFACE_WHITE,
+            fg_color=WHITE,
             scrollbar_button_color=PRIMARY_BLUE,
-            scrollbar_button_hover_color="#1565c0"
+            scrollbar_button_hover_color=PRIMARY_BLUE_DARK
         )
         self.chat_scrollable.pack(fill="both", expand=True, padx=10, pady=10)
         
@@ -124,7 +130,7 @@ class ChatAIView(ctk.CTk):
     def _setup_input_area(self) -> None:
         """Setup the input area (hidden by default)"""
         
-        self.input_frame = ctk.CTkFrame(self, fg_color=BACKGROUND_GREY, height=80)
+        self.input_frame = ctk.CTkFrame(self, fg_color=LIGHT_GRAY, height=80)
         self.input_frame.pack(fill="x", padx=10, pady=10)
         self.input_frame.pack_forget()  # Hide initially
         self.input_frame.pack_propagate(False)
@@ -138,19 +144,23 @@ class ChatAIView(ctk.CTk):
             input_container,
             placeholder_text="Escribe el nombre del producto...",
             font=ctk.CTkFont(size=14),
-            height=40
+            height=40,
+            fg_color=INPUT_BG,
+            border_color=INPUT_BORDER,
+            text_color=INPUT_TEXT
         )
         self.text_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
         
-        # Send button
+        # Send button con colores unificados
         self.send_button = ctk.CTkButton(
             input_container,
             text="Enviar 📤",
             width=100,
             height=40,
             command=self._send_text_message,
-            fg_color=SUCCESS_GREEN,
-            hover_color="#43a047"
+            fg_color=BUTTON_SUCCESS_BG,
+            hover_color=BUTTON_SUCCESS_HOVER,
+            text_color=BUTTON_SUCCESS_TEXT
         )
         self.send_button.pack(side="right")
         
@@ -226,14 +236,15 @@ class ChatAIView(ctk.CTk):
                     print(f"Drag scroll error: {e}")
         
         # Bind mouse wheel events
-        self.bind_all("<MouseWheel>", on_mouse_wheel)
-        self.bind_all("<Button-4>", on_mouse_wheel)
-        self.bind_all("<Button-5>", on_mouse_wheel)
+        # Bind scroll events only to this frame (not globally)
+        try:
+            self.bind("<MouseWheel>", on_mouse_wheel)
+            if hasattr(self, 'chat_container'):
+                self.chat_container.bind("<MouseWheel>", on_mouse_wheel)
+        except Exception as e:
+            print(f"Warning: Could not bind scroll events: {e}")
         
-        # Bind click and drag events (disabled globally to avoid button interference)
-        # self.bind_all("<Button-1>", on_button_press)
-        # self.bind_all("<ButtonRelease-1>", on_button_release)
-        # self.bind_all("<B1-Motion>", on_mouse_motion)
+        # Touch/drag simulation disabled in Frame mode
         
         # Also bind to the scrollable frame
         try:
@@ -480,7 +491,7 @@ class ChatAIView(ctk.CTk):
         msg_container.pack(fill="x", pady=5)
         
         # Material Design Bot Bubble (left side)
-        bubble_frame = ctk.CTkFrame(msg_container, fg_color=BACKGROUND_GREY, corner_radius=12)
+        bubble_frame = ctk.CTkFrame(msg_container, fg_color=LIGHT_GRAY, corner_radius=12)
         bubble_frame.pack(side="left", padx=(0, 100))
         
         # Bot icon + message
@@ -788,6 +799,29 @@ class ChatAIView(ctk.CTk):
                 summary_lines.append(f"{i}. {str(item)[:50]}...")
         
         return "\n".join(summary_lines)
+    
+    def set_previous_view(self, view_name):
+        """Establecer la vista anterior para navegación"""
+        self.previous_view = view_name
+    
+    def go_back(self):
+        """Volver a la vista anterior"""
+        try:
+            print(f"🔙 Regresando a vista: {self.previous_view}")
+            self.controlador.mostrar_vista(self.previous_view)
+        except Exception as e:
+            print(f"❌ Error regresando a vista anterior: {e}")
+            # Como fallback, ir a filtro
+            self.controlador.mostrar_vista("filtro")
+    
+    def cleanup(self):
+        """Handle cleanup when switching views"""
+        try:
+            if hasattr(self, '_chat_controller'):
+                # Cleanup controller if needed
+                pass
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
 
 
 if __name__ == "__main__":
@@ -795,6 +829,6 @@ if __name__ == "__main__":
     ctk.set_appearance_mode("light")
     ctk.set_default_color_theme("blue")
     
-    # Run app
-    app = WhatsAppChatApp()
-    app.mainloop()
+    # Test app - Create a simple test window
+    print("ChatAIView es una vista integrada, no puede ejecutarse independientemente.")
+    print("Para probar, ejecuta main.py")

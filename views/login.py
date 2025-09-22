@@ -1,10 +1,11 @@
-from config import AZUL_PRIMARIO
 import customtkinter as ctk
 from PIL import Image
 from components.layout import BaseLayout
+from colors import (PRIMARY_BLUE, BUTTON_PRIMARY_BG, BUTTON_PRIMARY_HOVER, BUTTON_PRIMARY_TEXT)
 import os
 import mysql.connector
 from tkinter import messagebox
+from typing import Any
 
 
 LOGO_PATH = os.path.join("img", "logo.png")
@@ -12,46 +13,69 @@ LOGO_PATH = os.path.join("img", "logo.png")
 
 class LoginView(ctk.CTkFrame):
     # -- funtions --
-    def verificar_credenciales(self):
+    def verificar_credenciales(self) -> None:
         usuario = self.username.get()
         clave = self.password.get()
 
+        # Debug logging detallado
+        print(f"🔍 LOGIN DEBUG:")
+        print(f"   - Usuario ingresado: [{usuario}] (longitud: {len(usuario)})")
+        print(f"   - Clave ingresada: [{clave}] (longitud: {len(clave)})")
+
         try:
-            conn = mysql.connector.connect(
-                host="localhost",
-                user="fs",
-                password="Gato7Sol",
-                database="sistema_inventario",
+            # Usar context manager para manejo seguro de conexiones
+            from db_utils import ConnectionManager, QueryExecutor
+            
+            # Primera consulta: ver todos los usuarios disponibles
+            todos_usuarios = QueryExecutor.execute_query(
+                "SELECT nombre, contrasena FROM personal", 
+                fetch_all=True
             )
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT * FROM personal WHERE nombre = %s AND contrasena = %s",
-                (usuario, clave),
+            print(f"   - Usuarios en BD: {[(u['nombre'], u['contrasena']) for u in todos_usuarios]}")
+            
+            # Segunda consulta: la consulta real del login
+            consulta = "SELECT * FROM personal WHERE nombre = %s AND contrasena = %s"
+            resultado = QueryExecutor.execute_query(
+                consulta, 
+                params=(usuario, clave), 
+                fetch_one=True
             )
-            resultado = cursor.fetchone()
-            conn.close()
+            
+            print(f"   - Consulta ejecutada: {consulta}")
+            print(f"   - Parámetros: usuario='{usuario}', clave='{clave}'")
+            print(f"   - Resultado: {resultado}")
 
             if resultado:
+                print(f"✅ Login exitoso para usuario: {usuario}")
                 self.controlador.mostrar_vista("filtro")
             else:
+                print(f"❌ Credenciales incorrectas para usuario: {usuario}")
+                print(f"   - Verifica exactamente: Usuario='{usuario}', Clave='{clave}'")
                 messagebox.showerror(
-                    "Acceso denegado", "Usuario o contraseña incorrectos"
+                    "Acceso denegado", 
+                    f"Usuario o contraseña incorrectos\n\n"
+                    f"Usuarios disponibles: {[u['nombre'] for u in todos_usuarios]}\n"
+                    f"Tu entrada: '{usuario}' / '{clave}'"
                 )
 
-        except mysql.connector.Error as err:
+        except Exception as err:
+            print(f"❌ Error de conexión en login: {err}")
+            import logging
+            logging.error(f"Login error: {err}")
             messagebox.showerror(
-                "Error de conexión", f"No se pudo conectar a la base de datos:\n{err}"
+                "Error de conexión", 
+                f"No se pudo conectar a la base de datos:\n{err}"
             )
 
-    def toggle_password(self):
+    def toggle_password(self) -> None:
         self.password.configure(show="" if self.show_pass_var.get() else "*")
 
     # --- main ---
-    def __init__(self, master, controlador):
+    def __init__(self, master: Any, controlador: Any):
         super().__init__(master)
         self.controlador = controlador  # Referencia al App para cambiar vistas
 
-        layout = BaseLayout(self, azul_hex=AZUL_PRIMARIO)
+        layout = BaseLayout(self, azul_hex=PRIMARY_BLUE)
         layout.pack(fill="both", expand=True)
 
         form = layout.left_panel
@@ -99,8 +123,9 @@ class LoginView(ctk.CTkFrame):
         login_btn = ctk.CTkButton(
             content,
             text="Acceder",
-            fg_color=AZUL_PRIMARIO,
-            hover_color="#00367d",
+            fg_color=BUTTON_PRIMARY_BG,
+            hover_color=BUTTON_PRIMARY_HOVER,
+            text_color=BUTTON_PRIMARY_TEXT,
             font=ctk.CTkFont(size=35),
             command=self.verificar_credenciales,
         )

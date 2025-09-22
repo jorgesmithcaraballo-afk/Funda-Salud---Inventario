@@ -1,5 +1,5 @@
 from conexion import obtener_conexion
-from config import AZUL_PRIMARIO
+from colors import PRIMARY_BLUE
 import customtkinter as ctk
 import openpyxl
 from openpyxl.styles import Font
@@ -10,72 +10,123 @@ class FiltroView(ctk.CTkFrame):
     def restaurar_tabla(self):
         for widget in self.tabla_scroll.winfo_children():
             widget.destroy()
+        
+        # IMPORTANTE: Resetear flag cuando se destruyen los widgets
+        self.encabezado_creado = False
+        
         self.crear_encabezado()  # ← encabezado solo una vez
         datos = self.obtener_datos_inventario()[::-1]
         self.mostrar_resultados(datos)
     
     def exportar_excel(self):
-        import openpyxl
-        from openpyxl.styles import Font
+        """
+        Exporta el inventario a Excel con diálogo de guardado y feedback
+        """
+        try:
+            import openpyxl
+            from openpyxl.styles import Font
+            from tkinter import messagebox
+            
+            # Primero solicitar dónde guardar el archivo
+            ruta_archivo = filedialog.asksaveasfilename(
+                defaultextension=".xlsx",
+                filetypes=[("Archivos Excel", "*.xlsx"), ("Todos los archivos", "*.*")],
+                title="Guardar inventario como...",
+                initialfile="inventario_exportado.xlsx"
+            )
+            
+            # Si el usuario canceló, salir
+            if not ruta_archivo:
+                return
+            
+            # Obtener datos del inventario
+            datos = self.obtener_datos_inventario()
+            
+            if not datos:
+                messagebox.showwarning("Sin datos", "No hay datos de inventario para exportar.")
+                return
 
-        datos = self.obtener_datos_inventario()
+            # Crear workbook
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Inventario"
 
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Inventario"
-
-        encabezado = [
-            "Código", "Descripción",
-            "E. Inicial Cant", "E. Inicial Costo", "E. Inicial Monto",
-            "Entradas Cant", "Entradas Costo", "Entradas Monto",
-            "Salidas Cant", "Salidas Costo", "Salidas Monto",
-            "E. Final Cant", "E. Final Costo", "E. Final Monto"
-        ]
-        ws.append(encabezado)
-
-        for col in ws.iter_cols(min_row=1, max_row=1):
-            for cell in col:
-                cell.font = Font(bold=True)
-
-        for item in datos:
-            codigo = f"C-{item.get('id', '')}"
-            descripcion = item.get("descripcion_insumo", "")
-            costo_unitario = item.get("costo_unitario") or 0
-
-            cant_inicial = item.get("ei_cant") or 0
-            costo_inicial = item.get("ei_costo") or 0
-            monto_inicial = cant_inicial * costo_inicial
-
-            cant_entrada = item.get("e_cant") or 0
-            costo_entrada = item.get("e_costo") or 0
-            monto_entrada = cant_entrada * costo_entrada
-
-            cant_salida = item.get("s_cant") or 0
-            costo_salida = item.get("s_costo") or 0
-            monto_salida = cant_salida * costo_salida
-
-            monto_final = existencia_final * costo_unitario
-            existencia_final = cant_inicial + cant_entrada - cant_salida
-
-            fila = [
-                codigo, descripcion,
-                cant_inicial, costo_inicial, monto_inicial,
-                cant_entrada, costo_entrada, monto_entrada,
-                cant_salida, costo_salida, monto_salida,
-                existencia_final, costo_unitario, monto_final
+            # Encabezados
+            encabezado = [
+                "Código", "Descripción",
+                "E. Inicial Cant", "E. Inicial Costo", "E. Inicial Monto",
+                "Entradas Cant", "Entradas Costo", "Entradas Monto",
+                "Salidas Cant", "Salidas Costo", "Salidas Monto",
+                "E. Final Cant", "E. Final Costo", "E. Final Monto"
             ]
-            ws.append(fila)
+            ws.append(encabezado)
 
-        # 🔽 Diálogo para elegir ubicación y nombre
-        ruta_archivo = filedialog.asksaveasfilename(
-            defaultextension=".xlsx",
-            filetypes=[("Excel files", "*.xlsx")],
-            title="Guardar como",
-            initialfile="inventario_exportado.xlsx"
-        )
+            # Formatear encabezados en negrita
+            for col in ws.iter_cols(min_row=1, max_row=1):
+                for cell in col:
+                    cell.font = Font(bold=True)
 
-        if ruta_archivo:
+            # Procesar cada item del inventario
+            for item in datos:
+                codigo = f"C-{item.get('id', '')}"
+                descripcion = item.get("descripcion_insumo", "")
+                costo_unitario = item.get("costo_unitario") or 0
+
+                # Existencia inicial
+                cant_inicial = item.get("ei_cant") or 0
+                costo_inicial = item.get("ei_costo") or 0
+                monto_inicial = cant_inicial * costo_inicial
+
+                # Entradas
+                cant_entrada = item.get("e_cant") or 0
+                costo_entrada = item.get("e_costo") or 0
+                monto_entrada = cant_entrada * costo_entrada
+
+                # Salidas
+                cant_salida = item.get("s_cant") or 0
+                costo_salida = item.get("s_costo") or 0
+                monto_salida = cant_salida * costo_salida
+
+                # Existencia final (según especificaciones)
+                # Columna M: cantidad final = inicial + entradas - salidas
+                existencia_final = cant_inicial + cant_entrada - cant_salida
+                
+                # Columna Q: monto final = monto inicial + monto entradas - monto salidas
+                monto_final = monto_inicial + monto_entrada - monto_salida
+
+                # Crear fila de datos
+                fila = [
+                    codigo, descripcion,
+                    cant_inicial, costo_inicial, monto_inicial,
+                    cant_entrada, costo_entrada, monto_entrada,
+                    cant_salida, costo_salida, monto_salida,
+                    existencia_final, costo_unitario, monto_final
+                ]
+                ws.append(fila)
+
+            # Guardar archivo
             wb.save(ruta_archivo)
+            
+            # Feedback de éxito
+            messagebox.showinfo(
+                "Exportación exitosa", 
+                f"✅ Inventario exportado correctamente!\n\n"
+                f"Archivo guardado en:\n{ruta_archivo}\n\n"
+                f"Total de productos: {len(datos)}"
+            )
+            
+        except PermissionError:
+            messagebox.showerror(
+                "Error de permisos", 
+                "❌ No se puede guardar el archivo.\n\n"
+                "El archivo podría estar abierto en Excel o no tienes permisos para escribir en esa ubicación."
+            )
+        except Exception as e:
+            messagebox.showerror(
+                "Error de exportación", 
+                f"❌ Error al exportar a Excel:\n\n{str(e)}\n\n"
+                "Intenta de nuevo o contacta al administrador."
+            )
 
     
     def mostrar_resultados(self, datos):
@@ -190,7 +241,7 @@ class FiltroView(ctk.CTkFrame):
         self.encabezado_creado = False
 
         # Encabezado azul
-        encabezado = ctk.CTkFrame(self, fg_color=AZUL_PRIMARIO)
+        encabezado = ctk.CTkFrame(self, fg_color=PRIMARY_BLUE)
         encabezado.place(relx=0.5, rely=0.0, relwidth=1, relheight=0.15, anchor="n")
 
         btn_subir = ctk.CTkButton(
@@ -217,7 +268,7 @@ class FiltroView(ctk.CTkFrame):
             fg_color="white",
             text_color="black",
             hover_color="#cccccc",
-            command=lambda: self.controlador.mostrar_vista("chat"),
+            command=lambda: self.controlador.mostrar_vista("chat_ai", vista_anterior="filtro"),
         )
         btn_chat.place(relx=0.98, rely=0.5, anchor="e")
 
@@ -232,7 +283,7 @@ class FiltroView(ctk.CTkFrame):
             fg_color="white",
             text_color="black",
             hover_color="#cccccc",
-            command=lambda: self.controlador.mostrar_vista("herramientas")
+            command=lambda: self.controlador.mostrar_vista("configuracion")
         )
         btn_herramientas.place(relx=0.08, rely=0.5, anchor="w")
 
@@ -272,8 +323,8 @@ class FiltroView(ctk.CTkFrame):
             values=["E. Inicial", "Entradas", "Salidas", "E. final"],
             font=ctk.CTkFont(size=20),
             width=280,
-            fg_color=AZUL_PRIMARIO,
-            button_color=AZUL_PRIMARIO,
+            fg_color=PRIMARY_BLUE,
+            button_color=PRIMARY_BLUE,
         )
         self.select_space.pack(side="left", padx=10)
 
@@ -282,7 +333,7 @@ class FiltroView(ctk.CTkFrame):
             text="Restaurar tabla",
             font=ctk.CTkFont(size=18),
             width=140,
-            fg_color=AZUL_PRIMARIO,
+            fg_color=PRIMARY_BLUE,
             text_color="white",
             hover_color="#0055aa",
             command=self.restaurar_tabla
