@@ -17,7 +17,13 @@ class LoginView(ctk.CTkFrame):
         usuario = self.username.get()
         clave = self.password.get()
 
+        # Debug logging detallado
+        print(f"🔍 LOGIN DEBUG:")
+        print(f"   - Usuario ingresado: [{usuario}] (longitud: {len(usuario)})")
+        print(f"   - Clave ingresada: [{clave}] (longitud: {len(clave)})")
+
         try:
+<<<<<<< HEAD
             # Use context manager for safe connection handling
             from db_utils import ConnectionManager, QueryExecutor
             
@@ -28,15 +34,48 @@ class LoginView(ctk.CTkFrame):
                 params=(usuario, clave), 
                 fetch_one=True
             )
+=======
+            # Usar context manager para manejo seguro de conexiones
+            from db_utils import ConnectionManager, QueryExecutor
+            
+            # Primera consulta: ver todos los usuarios disponibles
+            todos_usuarios = QueryExecutor.execute_query(
+                "SELECT nombre, contrasena FROM personal", 
+                fetch_all=True
+            )
+            print(f"   - Usuarios en BD: {[(u['nombre'], u['contrasena']) for u in todos_usuarios]}")
+            
+            # Segunda consulta: la consulta real del login
+            consulta = "SELECT * FROM personal WHERE nombre = %s AND contrasena = %s"
+            resultado = QueryExecutor.execute_query(
+                consulta, 
+                params=(usuario, clave), 
+                fetch_one=True
+            )
+            
+            print(f"   - Consulta ejecutada: {consulta}")
+            print(f"   - Parámetros: usuario='{usuario}', clave='{clave}'")
+            print(f"   - Resultado: {resultado}")
+>>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
 
             if resultado:
                 print(f"✅ Login exitoso para usuario: {usuario}")
                 self.controlador.mostrar_vista("filtro")
             else:
+<<<<<<< HEAD
                 print(f"❌ Credenciales incorrectas")
                 messagebox.showerror(
                     "Acceso denegado", 
                     "Usuario o contraseña incorrectos"
+=======
+                print(f"❌ Credenciales incorrectas para usuario: {usuario}")
+                print(f"   - Verifica exactamente: Usuario='{usuario}', Clave='{clave}'")
+                messagebox.showerror(
+                    "Acceso denegado", 
+                    f"Usuario o contraseña incorrectos\n\n"
+                    f"Usuarios disponibles: {[u['nombre'] for u in todos_usuarios]}\n"
+                    f"Tu entrada: '{usuario}' / '{clave}'"
+>>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
                 )
 
         except Exception as err:

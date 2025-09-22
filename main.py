@@ -39,6 +39,7 @@ class App(ctk.CTk):
         self.bind("<F11>", self.toggle_fullscreen)
         self.bind("<Escape>", self.exit_fullscreen)
         self.fullscreen_state = False
+<<<<<<< HEAD
         
         # Window state system to preserve size between views
         self.window_state = {
@@ -49,6 +50,8 @@ class App(ctk.CTk):
         
         # Monitor size changes to detect manual resizing
         self.bind("<Configure>", self._on_window_configure)
+=======
+>>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
 
         if os.path.exists(ICON_PATH):
             self.iconbitmap(ICON_PATH)
@@ -57,7 +60,11 @@ class App(ctk.CTk):
         self.frames = {}
         self.database_error = None
 
+<<<<<<< HEAD
         # Initialize database automatically
+=======
+        # Inicializar base de datos automáticamente
+>>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
         self.inicializar_base_datos()
 
     def inicializar_base_datos(self) -> None:
@@ -206,12 +213,34 @@ class App(ctk.CTk):
         """Alternar pantalla completa con F11"""
         self.fullscreen_state = not self.fullscreen_state
         self.attributes("-fullscreen", self.fullscreen_state)
+<<<<<<< HEAD
         
         # Mark as user-resized when exiting fullscreen
         if not self.fullscreen_state:
             self.window_state['user_resized'] = True
             
         return "break"
+=======
+        return "break"
+
+    def exit_fullscreen(self, event: Optional[Any] = None) -> str:
+        """Salir de pantalla completa con Escape"""
+        self.fullscreen_state = False
+        self.attributes("-fullscreen", False)
+        return "break"
+
+    def mostrar_vista(self, nombre: str, vista_anterior: Optional[str] = None) -> None:
+        """Mostrar vista con tamaño unificado y tracking de vista anterior"""
+        # Guardar vista anterior para navegación
+        if vista_anterior:
+            if hasattr(self.frames.get(nombre), 'set_previous_view'):
+                self.frames[nombre].set_previous_view(vista_anterior)
+        
+        # Usar tamaño unificado para todas las vistas
+        if not self.fullscreen_state:
+            geometry = get_window_geometry(nombre)
+            self.geometry(geometry)
+>>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
 
     def exit_fullscreen(self, event: Optional[Any] = None) -> str:
         """Salir de pantalla completa con Escape"""

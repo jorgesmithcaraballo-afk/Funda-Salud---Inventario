@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+from conexion import obtener_conexion
+>>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
 from colors import PRIMARY_BLUE
 import customtkinter as ctk
 import openpyxl
