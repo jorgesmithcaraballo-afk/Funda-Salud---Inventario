@@ -3,8 +3,8 @@ Simple Database Error View
 Displays connection error message with retry option
 """
 import customtkinter as ctk
-from colors import PRIMARY_BLUE, WHITE, ERROR_RED, BUTTON_PRIMARY_BG, BUTTON_PRIMARY_HOVER, BUTTON_PRIMARY_TEXT
-from strings import DB_ERROR_TITLE, DB_ERROR_MAIN_MESSAGE
+from resource.colors import PRIMARY_BLUE, WHITE, ERROR_RED, BUTTON_PRIMARY_BG, BUTTON_PRIMARY_HOVER, BUTTON_PRIMARY_TEXT
+from resource.strings import DB_ERROR_TITLE, DB_ERROR_MAIN_MESSAGE
 from PIL import Image
 import os
 

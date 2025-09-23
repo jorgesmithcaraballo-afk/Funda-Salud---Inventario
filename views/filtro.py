@@ -1,8 +1,6 @@
-<<<<<<< HEAD
-=======
+from resource.colors import PRIMARY_BLUE
 from conexion import obtener_conexion
->>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
-from colors import PRIMARY_BLUE
+from services.category_service import CategoryService
 import customtkinter as ctk
 import openpyxl
 from openpyxl.styles import Font
@@ -72,7 +70,7 @@ class FiltroView(ctk.CTkFrame):
 
             # Procesar cada item del inventario
             for item in datos:
-                codigo = f"C-{item.get('id', '')}"
+                codigo = str(item.get('id', ''))
                 descripcion = item.get("descripcion_insumo", "")
                 costo_unitario = item.get("costo_unitario") or 0
 
@@ -145,7 +143,7 @@ class FiltroView(ctk.CTkFrame):
             fila = ctk.CTkFrame(self.tabla_scroll, fg_color="#f9f9f9", corner_radius=4)
             fila.pack(pady=4, padx=10, fill="x")
 
-            codigo = f"C-{item.get('id', '')}"
+            codigo = str(item.get('id', ''))
             descripcion = item.get("descripcion_insumo", "")
             costo_unitario = item.get("costo_unitario") or 0
 
@@ -216,26 +214,34 @@ class FiltroView(ctk.CTkFrame):
 
 
     def aplicar_filtro(self, texto_busqueda):
-        if not texto_busqueda.strip():
-            resultados = self.obtener_datos_inventario()
-        else:    
-            texto_busqueda = texto_busqueda.lower()
-            terminos = [t.strip() for t in texto_busqueda.split(";") if t.strip()]
-            
-            # Obtener todos los datos
-            datos = self.obtener_datos_inventario()
+        texto_busqueda = (texto_busqueda or '').strip().lower()
+        terminos = [t.strip() for t in texto_busqueda.split(";") if t.strip()]
+        categoria_sel = (self.select_space.get() or 'Todas').strip()
 
-            # Filtrar
-            resultados = []
+        # Obtener todos los datos
+        datos = self.obtener_datos_inventario()
+
+        # Filtrar por texto
+        if terminos:
+            filtrados = []
             for item in datos:
                 cadena = f"{item.get('id', '')} {item.get('descripcion_insumo', '')}".lower()
                 if any(termino in cadena for termino in terminos):
-                    resultados.append(item)
+                    filtrados.append(item)
+        else:
+            filtrados = datos
 
-            # Limpiar tabla y mostrar resultados filtrados
-            for widget in self.tabla_scroll.winfo_children():
-                widget.destroy()
-            self.mostrar_resultados(resultados)
+        # Filtrar por categoría si no es 'Todas'
+        if categoria_sel and categoria_sel.lower() != 'todas':
+            filtrados = [it for it in filtrados if (it.get('categoria') or 'General') == categoria_sel]
+
+        # Limpiar tabla y mostrar resultados filtrados conservando encabezado
+        for widget in self.tabla_scroll.winfo_children():
+            widget.destroy()
+        # Reiniciar flag y recrear encabezado
+        self.encabezado_creado = False
+        self.crear_encabezado()
+        self.mostrar_resultados(filtrados)
 
     
     def __init__(self, master, controlador):
@@ -277,7 +283,8 @@ class FiltroView(ctk.CTkFrame):
         btn_chat.place(relx=0.98, rely=0.5, anchor="e")
 
         # para poner la vista de herramientas   
-        btn_herramientas = ctk.CTkButton(
+        # Botón de configuraciones (visible solo para admin)
+        self.btn_herramientas = ctk.CTkButton(
             encabezado,
             text="🛠️",  # ícono de herramientas
             width=40,
@@ -289,7 +296,12 @@ class FiltroView(ctk.CTkFrame):
             hover_color="#cccccc",
             command=lambda: self.controlador.mostrar_vista("configuracion")
         )
-        btn_herramientas.place(relx=0.08, rely=0.5, anchor="w")
+        # Guardar posición para reubicar cuando sea necesario
+        self._config_btn_place = {"relx": 0.08, "rely": 0.5, "anchor": "w"}
+        self.btn_herramientas.place(**self._config_btn_place)
+
+        # Actualizar visibilidad según rol
+        self.update_admin_visibility()
 
 
         title = ctk.CTkLabel(
@@ -324,13 +336,18 @@ class FiltroView(ctk.CTkFrame):
 
         self.select_space = ctk.CTkOptionMenu(
             filtro_content,
-            values=["E. Inicial", "Entradas", "Salidas", "E. final"],
+            values=["Cargando..."],  # se reemplaza por categorías reales
             font=ctk.CTkFont(size=20),
             width=280,
             fg_color=PRIMARY_BLUE,
             button_color=PRIMARY_BLUE,
         )
         self.select_space.pack(side="left", padx=10)
+        # Cuando cambie la categoría, aplicar filtro combinado
+        self.select_space.configure(command=lambda v: self._on_category_changed())
+
+        # Cargar categorías dinámicamente para otro filtro (si se requiere más adelante)
+        self._load_categories()
 
         btn_mostrar_todo = ctk.CTkButton(
             filtro_content,
@@ -386,9 +403,78 @@ class FiltroView(ctk.CTkFrame):
 
         self.tabla_scroll.bind("<Configure>", actualizar_scroll)
 
-        # mostrar tabla 
+        # mostrar tabla
         self.restaurar_tabla()
 
     def obtener_datos_inventario(self):
         """Get base inventory data using centralized queries"""
         return InventoryQueries.get_base_inventory_data()
+
+    # --- Control de visibilidad de admin ---
+    def update_admin_visibility(self) -> None:
+        """Muestra/oculta el botón de configuraciones según el rol del usuario actual."""
+        try:
+            user = getattr(self.controlador, 'current_user', None) or {}
+            es_admin = (user.get('tipo') or 'user') == 'admin'
+            if es_admin:
+                # Mostrar si está oculto
+                if not self.btn_herramientas.winfo_ismapped():
+                    self.btn_herramientas.place(**self._config_btn_place)
+            else:
+                # Ocultar si no es admin
+                if self.btn_herramientas.winfo_ismapped():
+                    self.btn_herramientas.place_forget()
+        except Exception:
+            # En caso de error, por seguridad ocultar
+            try:
+                self.btn_herramientas.place_forget()
+            except Exception:
+                pass
+
+    def reset_view_state(self) -> None:
+        """Método llamado por App.mostrar_vista para refrescar estado de la vista."""
+        self.update_admin_visibility()
+        # Refrescar categorías al entrar
+        try:
+            self._load_categories()
+        except Exception:
+            pass
+        # Restaurar la tabla respetando el filtro actual
+        try:
+            self.aplicar_filtro("")
+        except Exception:
+            pass
+
+    # ------------------------
+    # Carga de categorías desde Inventario
+    # ------------------------
+    def _load_categories(self) -> None:
+        """Carga categorías distintas desde Inventario y actualiza OptionMenu si existe."""
+        try:
+            categorias = CategoryService.get_all() or ["General"]
+        except Exception:
+            categorias = ["General"]
+
+        # Si en el futuro usamos select_space para categorías, aquí ya está disponible
+        # Por ahora dejamos el control preparado
+        try:
+            if hasattr(self, 'select_space') and self.select_space is not None:
+                opciones = ["Todas"] + categorias
+                current = self.select_space.get()
+                self.select_space.configure(values=opciones)
+                # Mantener selección si sigue existiendo; si no, 'Todas'
+                if current in opciones:
+                    self.select_space.set(current)
+                else:
+                    self.select_space.set("Todas")
+        except Exception:
+            pass
+
+    def _on_category_changed(self) -> None:
+        """Handler para cuando cambia la categoría en el OptionMenu: aplica filtro combinado"""
+        try:
+            # Leer el contenido del entry de búsqueda (si existe)
+            # Busco el entry dentro del panel de filtro cercano si lo necesitamos en el futuro.
+            self.aplicar_filtro("")
+        except Exception:
+            self.restaurar_tabla()

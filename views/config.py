@@ -1,1 +1,0 @@
-AZUL_PRIMARIO = "#004aad"

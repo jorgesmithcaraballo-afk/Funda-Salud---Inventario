@@ -9,38 +9,24 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 from controllers.chat_controller import ChatController
 from models.inventory_models import QueryResult
-from colors import (HEADER_BG, HEADER_TEXT, LIGHT_GRAY, VIEW_BACKGROUND, WHITE, 
+from resource.colors import (HEADER_BG, HEADER_TEXT, LIGHT_GRAY, VIEW_BACKGROUND, WHITE, 
                    PRIMARY_BLUE, PRIMARY_BLUE_DARK, INPUT_BG, INPUT_BORDER, INPUT_TEXT,
                    BUTTON_SUCCESS_BG, BUTTON_SUCCESS_HOVER, BUTTON_SUCCESS_TEXT,
                    get_header_button_style)
-from icons import *
+from resource.icons import *
 
 # AI Configuration - PUT YOUR GEMINI API KEY HERE
 API_KEY = "AIzaSyBWx-YLBoGowxRBJqO-oenJX3aeZ9J9Zvg"
 
 class ChatAIView(ctk.CTkFrame):
-<<<<<<< HEAD
     """Dashboard-style inventory management interface with AI assistance"""
-=======
-    """Main WhatsApp-style chat application for inventory management"""
->>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
     
     def __init__(self, master, controlador):
         super().__init__(master)
         self.controlador = controlador
-<<<<<<< HEAD
         self.previous_view = "filtro"
         
         self.configure(fg_color=LIGHT_GRAY)
-=======
-        self.previous_view = "filtro"  # Vista anterior por defecto
-        
-        # Frame configuration using unified colors
-        self.configure(fg_color=LIGHT_GRAY)
-        
-        # Chat state - simplified without product-specific mode
-        self.current_mode = "general"  # Always general mode
->>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
         
         # Initialize controller
         self._chat_controller = ChatController(API_KEY)
@@ -63,11 +49,7 @@ class ChatAIView(ctk.CTkFrame):
     def _setup_dashboard_ui(self) -> None:
         """Setup the dashboard-style UI"""
         
-<<<<<<< HEAD
         # Header
-=======
-        # Header unificado con botón de regreso
->>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
         header_frame = ctk.CTkFrame(self, fg_color=HEADER_BG, height=70)
         header_frame.pack(fill="x", padx=0, pady=0)
         header_frame.pack_propagate(False)
@@ -76,11 +58,7 @@ class ChatAIView(ctk.CTkFrame):
         header_content = ctk.CTkFrame(header_frame, fg_color="transparent")
         header_content.pack(expand=True, fill="both", padx=20, pady=15)
         
-<<<<<<< HEAD
         # Back button
-=======
-        # Botón de flecha atrás (izquierda)
->>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
         back_button_style = get_header_button_style()
         self.back_button = ctk.CTkButton(
             header_content,
@@ -90,11 +68,7 @@ class ChatAIView(ctk.CTkFrame):
         )
         self.back_button.pack(side="left", anchor="w")
         
-<<<<<<< HEAD
         # Title
-=======
-        # Título centrado
->>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
         title_label = ctk.CTkLabel(
             header_content,
             text="🤖 Asistente IA - Inventario",
@@ -122,492 +96,9 @@ class ChatAIView(ctk.CTkFrame):
     def _setup_grid_panel(self) -> None:
         """Setup the grid panel with question buttons and search"""
         
-<<<<<<< HEAD
         # Grid container
         grid_frame = ctk.CTkFrame(self, fg_color=WHITE)
         grid_frame.pack(fill="x", padx=10, pady=(10, 5))
-=======
-        # Chat Container con colores unificados
-        chat_container = ctk.CTkFrame(self, fg_color=WHITE)
-        chat_container.pack(fill="both", expand=True, padx=0, pady=0)
-        
-        # Scrollable Chat Frame
-        self.chat_scrollable = ctk.CTkScrollableFrame(
-            chat_container,
-            fg_color=WHITE,
-            scrollbar_button_color=PRIMARY_BLUE,
-            scrollbar_button_hover_color=PRIMARY_BLUE_DARK
-        )
-        self.chat_scrollable.pack(fill="both", expand=True, padx=10, pady=10)
-        
-        # Configure scrollable frame
-        self.chat_scrollable.configure(corner_radius=0)
-        
-        # Enable mouse wheel scrolling
-        self._setup_mouse_wheel_scrolling()
-        
-        # Additional CustomTkinter specific setup
-        self._setup_customtkinter_scroll()
-    
-    def _setup_input_area(self) -> None:
-        """Setup the input area (hidden by default)"""
-        
-        self.input_frame = ctk.CTkFrame(self, fg_color=LIGHT_GRAY, height=80)
-        self.input_frame.pack(fill="x", padx=10, pady=10)
-        self.input_frame.pack_forget()  # Hide initially
-        self.input_frame.pack_propagate(False)
-        
-        # Input container
-        input_container = ctk.CTkFrame(self.input_frame, fg_color="transparent")
-        input_container.pack(expand=True, fill="both", padx=15, pady=15)
-        
-        # Text entry
-        self.text_entry = ctk.CTkEntry(
-            input_container,
-            placeholder_text="Escribe el nombre del producto...",
-            font=ctk.CTkFont(size=14),
-            height=40,
-            fg_color=INPUT_BG,
-            border_color=INPUT_BORDER,
-            text_color=INPUT_TEXT
-        )
-        self.text_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
-        
-        # Send button con colores unificados
-        self.send_button = ctk.CTkButton(
-            input_container,
-            text="Enviar 📤",
-            width=100,
-            height=40,
-            command=self._send_text_message,
-            fg_color=BUTTON_SUCCESS_BG,
-            hover_color=BUTTON_SUCCESS_HOVER,
-            text_color=BUTTON_SUCCESS_TEXT
-        )
-        self.send_button.pack(side="right")
-        
-        # Bind Enter key
-        self.text_entry.bind("<Return>", lambda e: self._send_text_message())
-    
-    def _setup_mouse_wheel_scrolling(self) -> None:
-        """Setup mouse wheel scrolling AND click-drag scrolling for the chat area"""
-        
-        # Variables for click and drag scrolling
-        self._drag_start_y = 0
-        self._is_dragging = False
-        
-        def on_mouse_wheel(event):
-            """Handle mouse wheel scrolling in chat area"""
-            try:
-                # Get the canvas from the scrollable frame
-                if hasattr(self.chat_scrollable, '_parent_canvas'):
-                    canvas = self.chat_scrollable._parent_canvas
-                    
-                    # Calculate scroll amount
-                    if hasattr(event, 'delta'):
-                        # Windows and macOS
-                        delta = event.delta
-                    else:
-                        # Linux - Button-4 is up, Button-5 is down
-                        if event.num == 4:
-                            delta = 120
-                        elif event.num == 5:
-                            delta = -120
-                        else:
-                            return
-                    
-                    # Scroll the canvas
-                    canvas.yview_scroll(int(-delta/120), "units")
-                    return "break"  # Prevent further event processing
-                    
-            except Exception as e:
-                print(f"Scroll error: {e}")
-        
-        def on_button_press(event):
-            """Handle mouse button press for drag scrolling"""
-            if event.num == 1:  # Left mouse button
-                self._drag_start_y = event.y
-                self._is_dragging = True
-                return "break"
-        
-        def on_button_release(event):
-            """Handle mouse button release"""
-            if event.num == 1:  # Left mouse button
-                self._is_dragging = False
-                return "break"
-        
-        def on_mouse_motion(event):
-            """Handle mouse motion for drag scrolling"""
-            if self._is_dragging:
-                try:
-                    if hasattr(self.chat_scrollable, '_parent_canvas'):
-                        canvas = self.chat_scrollable._parent_canvas
-                        
-                        # Calculate the difference in Y position
-                        delta_y = event.y - self._drag_start_y
-                        
-                        # Convert pixel movement to scroll units (adjust sensitivity)
-                        scroll_units = int(-delta_y / 10)  # Adjust 10 for sensitivity
-                        
-                        if scroll_units != 0:
-                            canvas.yview_scroll(scroll_units, "units")
-                            self._drag_start_y = event.y  # Update start position
-                        
-                        return "break"
-                except Exception as e:
-                    print(f"Drag scroll error: {e}")
-        
-        # Bind mouse wheel events
-        # Bind scroll events only to this frame (not globally)
-        try:
-            self.bind("<MouseWheel>", on_mouse_wheel)
-            if hasattr(self, 'chat_container'):
-                self.chat_container.bind("<MouseWheel>", on_mouse_wheel)
-        except Exception as e:
-            print(f"Warning: Could not bind scroll events: {e}")
-        
-        # Touch/drag simulation disabled in Frame mode
-        
-        # Also bind to the scrollable frame
-        try:
-            self.chat_scrollable.bind("<MouseWheel>", on_mouse_wheel)
-            self.chat_scrollable.bind("<Button-4>", on_mouse_wheel) 
-            self.chat_scrollable.bind("<Button-5>", on_mouse_wheel)
-            
-            # Click and drag on scrollable frame
-            self.chat_scrollable.bind("<Button-1>", on_button_press)
-            self.chat_scrollable.bind("<ButtonRelease-1>", on_button_release)
-            self.chat_scrollable.bind("<B1-Motion>", on_mouse_motion)
-        except:
-            pass
-            
-        # Make sure the scrollable frame can receive focus
-        try:
-            self.chat_scrollable.focus_set()
-            self.update()  # Force update to ensure bindings are active
-        except:
-            pass
-    
-    def _bind_scroll_to_widget(self, widget) -> None:
-        """Bind mouse wheel scrolling to a specific widget - simplified"""
-        # This is now handled by the global binding, so we can simplify or remove this
-        pass
-    
-    def _setup_customtkinter_scroll(self) -> None:
-        """Additional CustomTkinter specific scroll setup"""
-        
-        def handle_scroll(event):
-            """More specific scroll handler for CustomTkinter"""
-            try:
-                # Try different approaches to get the scrollable area
-                if hasattr(self.chat_scrollable, '_scrollbar'):
-                    # Try using the scrollbar directly
-                    scrollbar = self.chat_scrollable._scrollbar
-                    if scrollbar and hasattr(scrollbar, 'delta'):
-                        scrollbar.delta(-1 if event.delta > 0 else 1)
-                        
-                elif hasattr(self.chat_scrollable, '_parent_canvas'):
-                    # Use the parent canvas approach
-                    canvas = self.chat_scrollable._parent_canvas
-                    canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
-                    
-                return "break"
-            except:
-                pass
-        
-        # Try to bind mouse events more directly
-        try:
-            # Get the actual frame widget
-            if hasattr(self.chat_scrollable, 'winfo_children'):
-                for child in self.chat_scrollable.winfo_children():
-                    try:
-                        child.bind("<MouseWheel>", handle_scroll)
-                        child.bind("<Button-4>", lambda e: handle_scroll(type('Event', (), {'delta': 120})()))
-                        child.bind("<Button-5>", lambda e: handle_scroll(type('Event', (), {'delta': -120})()))
-                    except:
-                        continue
-                        
-            # Also try binding to the container itself
-            chat_container = self.chat_scrollable.master
-            if chat_container:
-                chat_container.bind("<MouseWheel>", handle_scroll)
-                chat_container.bind("<Button-4>", lambda e: handle_scroll(type('Event', (), {'delta': 120})()))
-                chat_container.bind("<Button-5>", lambda e: handle_scroll(type('Event', (), {'delta': -120})()))
-                
-        except Exception as e:
-            print(f"CustomTkinter scroll setup error: {e}")
-    
-    def _ensure_scroll_working(self) -> None:
-        """Final attempt to ensure mouse wheel and drag scrolling works"""
-        
-        def universal_scroll_handler(event):
-            """Universal scroll handler that tries multiple approaches"""
-            # Calculate delta
-            if hasattr(event, 'delta'):
-                delta = event.delta
-            elif hasattr(event, 'num'):
-                delta = 120 if event.num == 4 else -120 if event.num == 5 else 0
-            else:
-                return
-            
-            # Try scrolling
-            try:
-                if hasattr(self.chat_scrollable, '_parent_canvas'):
-                    canvas = self.chat_scrollable._parent_canvas
-                    scroll_amount = -1 if delta > 0 else 1
-                    canvas.yview_scroll(scroll_amount, "units")
-                    return "break"
-            except:
-                pass
-        
-        def universal_drag_start(event):
-            if event.num == 1:
-                self._drag_start_y = event.y
-                self._is_dragging = True
-                return "break"
-        
-        def universal_drag_end(event):
-            if event.num == 1:
-                self._is_dragging = False
-                return "break"
-        
-        def universal_drag_motion(event):
-            if self._is_dragging:
-                try:
-                    if hasattr(self.chat_scrollable, '_parent_canvas'):
-                        canvas = self.chat_scrollable._parent_canvas
-                        delta_y = event.y - self._drag_start_y
-                        scroll_units = int(-delta_y / 10)
-                        
-                        if scroll_units != 0:
-                            canvas.yview_scroll(scroll_units, "units")
-                            self._drag_start_y = event.y
-                        
-                        return "break"
-                except:
-                    pass
-        
-        # Bind to every possible element
-        try:
-            # Main window - wheel scroll
-            self.bind("<MouseWheel>", universal_scroll_handler, "+")
-            self.bind("<Button-4>", universal_scroll_handler, "+")
-            self.bind("<Button-5>", universal_scroll_handler, "+")
-            
-            # Main window - drag scroll (disabled to avoid interfering with buttons)
-            # self.bind("<Button-1>", universal_drag_start, "+")
-            # self.bind("<ButtonRelease-1>", universal_drag_end, "+")
-            # self.bind("<B1-Motion>", universal_drag_motion, "+")
-            
-            # Chat scrollable and its children - wheel scroll
-            self.chat_scrollable.bind("<MouseWheel>", universal_scroll_handler, "+")
-            self.chat_scrollable.bind("<Button-4>", universal_scroll_handler, "+")
-            self.chat_scrollable.bind("<Button-5>", universal_scroll_handler, "+")
-            
-            # Chat scrollable and its children - drag scroll
-            self.chat_scrollable.bind("<Button-1>", universal_drag_start, "+")
-            self.chat_scrollable.bind("<ButtonRelease-1>", universal_drag_end, "+")
-            self.chat_scrollable.bind("<B1-Motion>", universal_drag_motion, "+")
-            
-            # All existing children
-            for widget in self.chat_scrollable.winfo_children():
-                try:
-                    # Wheel scroll for all widgets
-                    widget.bind("<MouseWheel>", universal_scroll_handler, "+")
-                    widget.bind("<Button-4>", universal_scroll_handler, "+")
-                    widget.bind("<Button-5>", universal_scroll_handler, "+")
-                    
-                    # Drag scroll ONLY for non-button widgets
-                    widget_class = widget.winfo_class()
-                    if widget_class not in ["Button", "CTkButton"]:
-                        widget.bind("<Button-1>", universal_drag_start, "+")
-                        widget.bind("<ButtonRelease-1>", universal_drag_end, "+")
-                        widget.bind("<B1-Motion>", universal_drag_motion, "+")
-                except:
-                    pass
-                    
-            print("✅ Scroll and drag bindings applied successfully")
-            
-        except Exception as e:
-            print(f"Error setting up scroll and drag: {e}")
-    
-    def _apply_scroll_to_element(self, element) -> None:
-        """Apply scroll functionality (wheel + drag) to a new element"""
-        def element_scroll(event):
-            try:
-                if hasattr(self.chat_scrollable, '_parent_canvas'):
-                    canvas = self.chat_scrollable._parent_canvas
-                    delta = event.delta if hasattr(event, 'delta') else (120 if event.num == 4 else -120 if event.num == 5 else 0)
-                    scroll_amount = -1 if delta > 0 else 1
-                    canvas.yview_scroll(scroll_amount, "units")
-                    return "break"
-            except:
-                pass
-        
-        def element_drag_start(event):
-            if event.num == 1:  # Left button
-                self._drag_start_y = event.y
-                self._is_dragging = True
-                return "break"
-        
-        def element_drag_end(event):
-            if event.num == 1:  # Left button
-                self._is_dragging = False
-                return "break"
-        
-        def element_drag_motion(event):
-            if self._is_dragging:
-                try:
-                    if hasattr(self.chat_scrollable, '_parent_canvas'):
-                        canvas = self.chat_scrollable._parent_canvas
-                        delta_y = event.y - self._drag_start_y
-                        scroll_units = int(-delta_y / 10)
-                        
-                        if scroll_units != 0:
-                            canvas.yview_scroll(scroll_units, "units")
-                            self._drag_start_y = event.y
-                        
-                        return "break"
-                except:
-                    pass
-        
-        try:
-            # Mouse wheel events
-            element.bind("<MouseWheel>", element_scroll, "+")
-            element.bind("<Button-4>", element_scroll, "+")
-            element.bind("<Button-5>", element_scroll, "+")
-            
-            # Click and drag events
-            element.bind("<Button-1>", element_drag_start, "+")
-            element.bind("<ButtonRelease-1>", element_drag_end, "+")
-            element.bind("<B1-Motion>", element_drag_motion, "+")
-        except:
-            pass
-    
-    def _apply_wheel_scroll_to_element(self, element) -> None:
-        """Apply ONLY wheel scroll to element (for buttons - preserves click functionality)"""
-        def element_scroll(event):
-            try:
-                if hasattr(self.chat_scrollable, '_parent_canvas'):
-                    canvas = self.chat_scrollable._parent_canvas
-                    delta = event.delta if hasattr(event, 'delta') else (120 if event.num == 4 else -120 if event.num == 5 else 0)
-                    scroll_amount = -1 if delta > 0 else 1
-                    canvas.yview_scroll(scroll_amount, "units")
-                    return "break"
-            except:
-                pass
-        
-        try:
-            # ONLY mouse wheel events, no click/drag events
-            element.bind("<MouseWheel>", element_scroll, "+")
-            element.bind("<Button-4>", element_scroll, "+")
-            element.bind("<Button-5>", element_scroll, "+")
-        except:
-            pass
-    
-    def _add_bot_message(self, message: str) -> None:
-        """Add a bot message bubble to the chat"""
-        
-        # Message container (left aligned)
-        msg_container = ctk.CTkFrame(self.chat_scrollable, fg_color="transparent")
-        msg_container.pack(fill="x", pady=5)
-        
-        # Material Design Bot Bubble (left side)
-        bubble_frame = ctk.CTkFrame(msg_container, fg_color=LIGHT_GRAY, corner_radius=12)
-        bubble_frame.pack(side="left", padx=(0, 100))
-        
-        # Bot icon + message
-        content_frame = ctk.CTkFrame(bubble_frame, fg_color="transparent")
-        content_frame.pack(fill="both", expand=True, padx=15, pady=10)
-        
-        # Message text with increased wrap length for full recommendations
-        message_label = ctk.CTkLabel(
-            content_frame,
-            text=message,
-            font=ctk.CTkFont(size=13),
-            wraplength=500,  # Increased for longer recommendations
-            justify="left",
-            anchor="w"
-        )
-        message_label.pack(fill="x")
-        
-        # Timestamp
-        timestamp = datetime.now().strftime("%H:%M")
-        time_label = ctk.CTkLabel(
-            content_frame,
-            text=timestamp,
-            font=ctk.CTkFont(size=10),
-            text_color="#666666"
-        )
-        time_label.pack(anchor="w", pady=(5, 0))
-        
-        # Apply scroll to new message elements
-        self._apply_scroll_to_element(msg_container)
-        self._apply_scroll_to_element(bubble_frame)
-        self._apply_scroll_to_element(message_label)
-        
-        # Smart scroll: bot messages go to bottom unless we're in AI response mode
-        if not getattr(self, '_in_ai_response_mode', False):
-            self.after(100, self._scroll_to_bottom)
-    
-    def _add_user_message(self, message: str) -> None:
-        """Add a user message bubble to the chat"""
-        
-        # Message container (right aligned)
-        msg_container = ctk.CTkFrame(self.chat_scrollable, fg_color="transparent")
-        msg_container.pack(fill="x", pady=5)
-        
-        # Material Design User Bubble (right side)
-        bubble_frame = ctk.CTkFrame(msg_container, fg_color=PRIMARY_BLUE, corner_radius=12)
-        bubble_frame.pack(side="right", padx=(100, 0))
-        
-        # Message content
-        content_frame = ctk.CTkFrame(bubble_frame, fg_color="transparent")
-        content_frame.pack(fill="both", expand=True, padx=15, pady=10)
-        
-        # Message text
-        message_label = ctk.CTkLabel(
-            content_frame,
-            text=message,
-            font=ctk.CTkFont(size=13),
-            text_color="white",
-            wraplength=400,
-            justify="right",
-            anchor="e"
-        )
-        message_label.pack(fill="x")
-        
-        # Timestamp
-        timestamp = datetime.now().strftime("%H:%M")
-        time_label = ctk.CTkLabel(
-            content_frame,
-            text=timestamp,
-            font=ctk.CTkFont(size=10),
-            text_color="#cccccc"
-        )
-        time_label.pack(anchor="e", pady=(5, 0))
-        
-        # Apply scroll to new user message elements
-        self._apply_scroll_to_element(msg_container)
-        self._apply_scroll_to_element(bubble_frame)
-        self._apply_scroll_to_element(message_label)
-        
-        # Always auto-scroll for user messages
-        self.after(100, self._scroll_to_bottom)
-    
-    def _show_question_buttons(self) -> None:
-        """Show the question buttons menu"""
-        
-        # Get available general queries
-        available_queries = self._chat_controller.get_available_queries()
-        
-        # Questions container
-        questions_container = ctk.CTkFrame(self.chat_scrollable, fg_color="transparent")
-        questions_container.pack(fill="x", pady=10)
-        
-        # Apply wheel scroll only to questions container (has buttons inside)
-        self._apply_wheel_scroll_to_element(questions_container)
->>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
         
         # Title
         grid_title = ctk.CTkLabel(
@@ -857,7 +348,6 @@ class ChatAIView(ctk.CTkFrame):
         """Set the previous view for navigation"""
         self.previous_view = view_name
     
-<<<<<<< HEAD
     def reset_view_state(self):
         """Public method to reset view state when entering"""
         self._reset_to_initial_state()
@@ -868,63 +358,17 @@ class ChatAIView(ctk.CTkFrame):
             self.controlador.mostrar_vista(self.previous_view)
         except Exception as e:
             print(f"❌ Error de navegación: {e}")
-=======
-    def _format_data_summary(self, data_items: list) -> str:
-        """Format data items for display"""
-        summary_lines = []
-        
-        for i, item in enumerate(data_items, 1):
-            if 'descripcion' in item:
-                desc = item['descripcion']
-                if 'stock_actual' in item:
-                    summary_lines.append(f"{i}. **{desc}** - Stock: {item['stock_actual']}")
-                elif 'ventas_mes' in item:
-                    summary_lines.append(f"{i}. **{desc}** - Ventas: {item['ventas_mes']}")
-                else:
-                    summary_lines.append(f"{i}. **{desc}**")
-            elif 'producto' in item:
-                summary_lines.append(f"{i}. **{item['producto']}**")
-            else:
-                summary_lines.append(f"{i}. {str(item)[:50]}...")
-        
-        return "\n".join(summary_lines)
-    
-    def set_previous_view(self, view_name):
-        """Establecer la vista anterior para navegación"""
-        self.previous_view = view_name
-    
-    def go_back(self):
-        """Volver a la vista anterior"""
-        try:
-            print(f"🔙 Regresando a vista: {self.previous_view}")
-            self.controlador.mostrar_vista(self.previous_view)
-        except Exception as e:
-            print(f"❌ Error regresando a vista anterior: {e}")
-            # Como fallback, ir a filtro
->>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
             self.controlador.mostrar_vista("filtro")
     
     def cleanup(self):
         """Handle cleanup when switching views"""
         try:
             if hasattr(self, '_chat_controller'):
-<<<<<<< HEAD
-=======
-                # Cleanup controller if needed
->>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
                 pass
         except Exception as e:
             print(f"Error during cleanup: {e}")
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
-=======
-    # Configure CustomTkinter
-    ctk.set_appearance_mode("light")
-    ctk.set_default_color_theme("blue")
-    
-    # Test app - Create a simple test window
->>>>>>> 814cffca9df45649e361ad25989025e1e99ed59c
     print("ChatAIView es una vista integrada, no puede ejecutarse independientemente.")
     print("Para probar, ejecuta main.py")

@@ -21,6 +21,7 @@ class InventoryQueries:
             SELECT 
                 i.id,
                 i.descripcion_insumo,
+                i.categoria,
                 i.costo_unitario,
                 ei.cantidad AS ei_cant,
                 ei.costo AS ei_costo,
