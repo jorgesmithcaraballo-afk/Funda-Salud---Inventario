@@ -1,5 +1,11 @@
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+*.egg
+.venv/
+.env
 .DS_Store
 .windsurf/
-.venv/
