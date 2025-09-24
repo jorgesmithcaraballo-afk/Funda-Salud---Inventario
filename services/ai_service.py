@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from models.inventory_models import InventoryQuery, QueryResult, AIServiceConfig, QueryType
-from services.inventory_queries import InventoryQueries
+from services.domain.inventory_queries import InventoryQueries
 
 
 class ResponseFormatter:

@@ -1,9 +1,16 @@
-from views.configuracion import ConfiguracionView
-from views.filtro import FiltroView
-from views.login import LoginView
-from views.subir import SubirView
-from views.database_error import DatabaseErrorView
-from views.chat_ai import ChatAIView
+import os as _os_sys
+import sys as _sys
+# Garantizar que el root del proyecto esté en sys.path
+_ROOT = _os_sys.path.dirname(__file__)
+if _ROOT not in _sys.path:
+    _sys.path.insert(0, _ROOT)
+
+from views.configuracion_window import ConfiguracionView
+from views.filtro_window import FiltroView
+from views.login_window import LoginView
+from views.subir_window import SubirView
+from views.database_error_window import DatabaseErrorView
+from views.chat_ai_window import ChatAIView
 from resource.colors import (WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT, 
                    get_window_geometry, get_header_button_style)
 from tkinter import filedialog
@@ -12,7 +19,6 @@ import mysql.connector
 import logging
 import os
 from typing import Dict, Any, Optional
-
 
 ICON_PATH = os.path.join("img", "icono.ico")
 
