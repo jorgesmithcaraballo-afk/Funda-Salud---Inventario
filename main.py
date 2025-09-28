@@ -11,9 +11,8 @@ from views.login_window import LoginView
 from views.subir_window import SubirView
 from views.database_error_window import DatabaseErrorView
 from views.chat_ai_window import ChatAIView
-from resource.colors import (WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT, 
-                   get_window_geometry, get_header_button_style)
-from tkinter import filedialog
+from resource.sizes import WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT
+from resource.colors import get_window_geometry
 import customtkinter as ctk
 import mysql.connector
 import logging
@@ -35,58 +34,67 @@ class App(ctk.CTk):
         super().__init__()
 
         self.title("Sistema de Inventario - Fundación Salud")
-        self.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
-        self.resizable(True, True)  # Permitir redimensionar
-        
-        # Configurar tamaño mínimo
+
+        # Permitir redimensionamiento (comportamiento previo, evita caja pequeña)
+        self.resizable(True, True)
+
+        # Configurar tamaño mínimo (antes de maximizar para evitar que se haga muy pequeña)
         self.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
+
+        # --- Ventana maximizada en inicio ---
+        if _sys.platform.startswith("win"):
+            # Windows soporta "zoomed"
+            self.state("zoomed")
+        else:
+            # macOS / Linux: usar tamaño completo de la pantalla
+            self.update_idletasks()  # asegura cálculo correcto de screen size
+            w, h = self.winfo_screenwidth(), self.winfo_screenheight()
+            self.geometry(f"{w}x{h}+0+0")
+
+        # Nota: no forzar relación de aspecto para permitir maximizar libremente en macOS/Windows
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.background = ctk.CTkFrame(self, fg_color="white")
         
-        # Configurar para permitir pantalla completa
-        self.bind("<F11>", self.toggle_fullscreen)
-        self.bind("<Escape>", self.exit_fullscreen)
-        self.fullscreen_state = False
-        
-        # Window state system to preserve size between views
-        self.window_state = {
-            'geometry_set': False,  # Whether initial geometry was set
-            'user_resized': False,  # Whether user manually resized window
-            'current_view': None    # Current view for tracking
-        }
-        
-        # Monitor size changes to detect manual resizing
-        self.bind("<Configure>", self._on_window_configure)
+        # Re-aplicar maximización cuando el loop está listo (macOS/Linux)
+        # Esto evita casos donde el gestor de ventanas reajusta el tamaño inicial.
+        self.after(0, self._maximize_startup)
+        # Enforce maximized once when the window is mapped (macOS safety)
+        try:
+            self._max_enforced = False
+            self.bind("<Map>", self._on_map_enforce_max)
+        except Exception:
+            pass
 
         if os.path.exists(ICON_PATH):
-            self.iconbitmap(ICON_PATH)
+            try:
+                self.iconbitmap(ICON_PATH)
+            except Exception:
+                logger.warning("No se pudo cargar el ícono en este sistema.")
 
-        # Dictionary to store views
-        self.frames = {}
-        self.database_error = None
+        # Diccionario para almacenar vistas
+        self.frames: Dict[str, ctk.CTkFrame] = {}
+        self.database_error: Optional[str] = None
 
-        # Initialize database automatically
+        # Inicializar base de datos
         self.inicializar_base_datos()
 
     def inicializar_base_datos(self) -> None:
         """Inicializar y configurar MySQL automáticamente"""
         try:
             logger.info("🔄 Iniciando configuración automática de MySQL...")
-            
-            # Intentar conectar y crear la base de datos si es necesario
+
             from conexion import db_manager, crear_base_datos
-            
-            # Verificar si ya existe conexión
+
             if self.verificar_conexion_database():
                 logger.info("✅ Base de datos MySQL ya configurada")
                 self.registrar_vistas_principales()
                 self.mostrar_vista("login")
                 return
-            
-            # Si no existe, intentar crear automáticamente
+
             logger.info("🛠️ Configurando MySQL automáticamente...")
-            
-            # Intentar crear con diferentes credenciales root comunes
             mysql_creado = self.crear_mysql_automaticamente()
-            
+
             if mysql_creado:
                 logger.info("✅ MySQL configurado exitosamente")
                 self.registrar_vistas_principales()
@@ -95,7 +103,7 @@ class App(ctk.CTk):
                 logger.warning("⚠️ No se pudo configurar MySQL automáticamente")
                 self.registrar_vista_error()
                 self.mostrar_vista("database_error")
-                
+
         except Exception as e:
             logger.error(f"❌ Error en inicialización: {e}")
             self.database_error = str(e)
@@ -106,54 +114,53 @@ class App(ctk.CTk):
         """Crear base de datos MySQL automáticamente con credenciales comunes"""
         from config import db_config
         credenciales_root = db_config.ROOT_CREDENTIALS
-        
+
         for usuario, password in credenciales_root:
             try:
                 logger.info(f"🔑 Intentando conectar como {usuario}...")
-                
-                # Conectar como root
+
                 root_conn = mysql.connector.connect(
                     host="localhost",
                     user=usuario,
                     password=password
                 )
-                
                 cursor = root_conn.cursor()
-                
-                # Crear base de datos
+
                 logger.info("🗄️ Creando base de datos 'sistema_inventario'...")
                 cursor.execute("CREATE DATABASE IF NOT EXISTS sistema_inventario")
-                
-                # Crear usuario 'fs'
+
                 logger.info(f"👤 Creando usuario '{db_config.MYSQL_USER}'...")
                 cursor.execute(f"DROP USER IF EXISTS '{db_config.MYSQL_USER}'@'localhost'")
-                cursor.execute(f"CREATE USER '{db_config.MYSQL_USER}'@'localhost' IDENTIFIED BY '{db_config.MYSQL_PASSWORD}'")
-                cursor.execute(f"GRANT ALL PRIVILEGES ON {db_config.MYSQL_DATABASE}.* TO '{db_config.MYSQL_USER}'@'localhost'")
+                cursor.execute(
+                    f"CREATE USER '{db_config.MYSQL_USER}'@'localhost' "
+                    f"IDENTIFIED BY '{db_config.MYSQL_PASSWORD}'"
+                )
+                cursor.execute(
+                    f"GRANT ALL PRIVILEGES ON {db_config.MYSQL_DATABASE}.* "
+                    f"TO '{db_config.MYSQL_USER}'@'localhost'"
+                )
                 cursor.execute("FLUSH PRIVILEGES")
-                
+
                 cursor.close()
                 root_conn.close()
-                
-                # Crear estructura de tablas
+
                 logger.info("📋 Creando estructura de tablas...")
                 from conexion import crear_base_datos
                 crear_base_datos()
-                
-                logger.info("✅ ¡MySQL configurado exitosamente!")
+
                 return True
-                
+
             except mysql.connector.Error as e:
                 logger.debug(f"❌ Falló conexión con {usuario}: {e}")
                 continue
             except Exception as e:
                 logger.debug(f"❌ Error inesperado con {usuario}: {e}")
                 continue
-        
+
         logger.error("❌ No se pudo conectar con ninguna credencial root común")
         return False
 
     def verificar_conexion_database(self) -> bool:
-        """Verificar si se puede conectar a la base de datos"""
         try:
             from conexion import obtener_conexion
             conn = obtener_conexion()
@@ -170,31 +177,24 @@ class App(ctk.CTk):
             return False
 
     def registrar_vistas_principales(self) -> None:
-        """Registrar todas las vistas principales de la aplicación"""
         try:
             self.registrar_vista("login", LoginView)
             self.registrar_vista("chat_ai", ChatAIView)
             self.registrar_vista("subir", SubirView)
             self.registrar_vista("configuracion", ConfiguracionView)
-            
-            # FiltroView requiere conexión DB, manejar separadamente
             self.registrar_vista("filtro", FiltroView)
-            
         except Exception as e:
             logger.error(f"Error registrando vistas: {e}")
-            # Si hay error registrando vistas, mostrar error de DB
             self.registrar_vista_error()
             self.mostrar_vista("database_error")
 
     def registrar_vista_error(self) -> None:
-        """Registrar solo la vista de error de base de datos"""
         try:
             frame = DatabaseErrorView(self, self, self.database_error or "Error de conexión desconocido")
             self.frames["database_error"] = frame
-            frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+            frame.grid(row=0, column=0, sticky="nsew")
         except Exception as e:
             logger.error(f"Error crítico registrando vista de error: {e}")
-            # Como último recurso, mostrar mensaje básico
             import tkinter.messagebox as mb
             mb.showerror(
                 "Error Crítico",
@@ -206,72 +206,61 @@ class App(ctk.CTk):
     def registrar_vista(self, nombre: str, clase_vista: type) -> None:
         frame = clase_vista(self, self)
         self.frames[nombre] = frame
-        frame.place(relx=0, rely=0, relwidth=1, relheight=1)
-        # Mantener la vista oculta hasta que se seleccione explícitamente con mostrar_vista
+        frame.grid(row=0, column=0, sticky="nsew")
         try:
             frame.lower()
         except Exception:
             pass
 
-    def toggle_fullscreen(self, event: Optional[Any] = None) -> str:
-        """Alternar pantalla completa con F11"""
-        self.fullscreen_state = not self.fullscreen_state
-        self.attributes("-fullscreen", self.fullscreen_state)
-        
-        # Mark as user-resized when exiting fullscreen
-        if not self.fullscreen_state:
-            self.window_state['user_resized'] = True
-            
-        return "break"
-
-    def exit_fullscreen(self, event: Optional[Any] = None) -> str:
-        """Salir de pantalla completa con Escape"""
-        self.fullscreen_state = False
-        self.attributes("-fullscreen", False)
-        
-        # Mark as user-resized
-        self.window_state['user_resized'] = True
-        
-        return "break"
-
-    def _on_window_configure(self, event: Any) -> None:
-        """Detect when user manually resizes the window"""
-        if event.widget == self:  # Only main window events
-            # If initial geometry was set, any change is from user
-            if self.window_state['geometry_set']:
-                self.window_state['user_resized'] = True
-
     def mostrar_vista(self, nombre: str, vista_anterior: Optional[str] = None) -> None:
-        """Show view preserving current window state"""
-        
-        # Save previous view for navigation
         if vista_anterior:
             if hasattr(self.frames.get(nombre), 'set_previous_view'):
                 self.frames[nombre].set_previous_view(vista_anterior)
-        
-        # Reset view state if method exists
+
         if hasattr(self.frames.get(nombre), 'reset_view_state'):
             self.frames[nombre].reset_view_state()
-        
-        # Only apply fixed geometry if:
-        # 1. Not in fullscreen mode
-        # 2. User hasn't manually resized
-        # 3. First view or initial change
-        if (not self.fullscreen_state and 
-            not self.window_state['user_resized'] and 
-            not self.window_state['geometry_set']):
-            
-            geometry = get_window_geometry(nombre)
-            self.geometry(geometry)
-            self.window_state['geometry_set'] = True
-            
-        # Update current view
-        self.window_state['current_view'] = nombre
 
-        # Show the view
+        self.window_state = {"current_view": nombre}
+
         for vista in self.frames.values():
             vista.lower()
         self.frames[nombre].lift()
+
+    def _maximize_startup(self) -> None:
+        """Apply maximized geometry once the event loop is running."""
+        try:
+            if _sys.platform.startswith("win"):
+                # Re-aplicar zoomed por si el gestor de ventanas cambió el estado
+                self.state("zoomed")
+            else:
+                # En macOS/Linux calcular tamaño de pantalla y aplicar geometría
+                try:
+                    self.update_idletasks()
+                except Exception:
+                    pass
+                w, h = self.winfo_screenwidth(), self.winfo_screenheight()
+                try:
+                    self.geometry(f"{w}x{h}+0+0")
+                except Exception:
+                    pass
+            # Reaplicar mínimos/aspecto tras maximizar
+            try:
+                self.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
+            except Exception:
+                pass
+        except Exception:
+            # Evitar que un fallo aquí impida abrir la app
+            pass
+
+    def _on_map_enforce_max(self, _evt=None) -> None:
+        """Enforce maximize once when window gets mapped to the screen (macOS)."""
+        if getattr(self, "_max_enforced", False):
+            return
+        try:
+            self._maximize_startup()
+            self._max_enforced = True
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

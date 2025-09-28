@@ -10,6 +10,12 @@ import os
 
 from db.crud.personal_crud_service import PersonalCRUD
 from services.domain.category_service import CategoryService
+from services.application.filtro_service import FiltroService
+from db.crud.inventario_crud_service import InventarioCRUD
+from db.crud.existencia_inicial_crud_service import ExistenciaInicialCRUD
+from db.crud.entradas_crud_service import EntradasCRUD
+from db.crud.salidas_crud_service import SalidasCRUD
+from db.crud.existencia_final_crud_service import ExistenciaFinalCRUD
 
 
 class ConfiguracionService:
@@ -72,4 +78,44 @@ class ConfiguracionService:
         if name.strip().lower() == "general":
             return False
         return CategoryService.delete(name)
+
+    # ------------------ Inventario ------------------
+    @staticmethod
+    def load_inventario_codes_map() -> Tuple[
+        List[str], List[str], Dict[str, Dict[str, Any]], Dict[str, str], Dict[str, str]
+    ]:
+        """Carga los datos del inventario para los comboboxes de selección."""
+        return FiltroService.load_inventario_codes_map()
+
+    @staticmethod
+    def get_product_history(product_id: int) -> Dict[str, Any]:
+        """Recopila toda la información histórica de un producto."""
+        history = {
+            "inventario": InventarioCRUD.get_by_id(product_id),
+            "existencia_inicial": ExistenciaInicialCRUD.get_by_inventario_id(product_id),
+            "entradas": EntradasCRUD.get_by_inventario_id(product_id),
+            "salidas": SalidasCRUD.get_by_inventario_id(product_id),
+            "existencia_final": ExistenciaFinalCRUD.get_by_inventario_id(product_id),
+        }
+        return history
+
+    @staticmethod
+    def delete_product_full(product_id: int) -> bool:
+        """Elimina un producto y todos sus registros asociados."""
+        try:
+            # Delete associated records first to avoid foreign key constraint errors
+            ExistenciaInicialCRUD.delete_by_inventario_id(product_id)
+            EntradasCRUD.delete_by_inventario_id(product_id)
+            SalidasCRUD.delete_by_inventario_id(product_id)
+            ExistenciaFinalCRUD.delete_by_inventario_id(product_id)
+
+            # Finally, delete the main product record
+            affected_rows = InventarioCRUD.delete(product_id)
+            
+            return affected_rows > 0
+        except Exception as e:
+            # In a real-world scenario, you would log this error
+            print(f"Error during full product deletion: {e}")
+            # Consider using transactions to roll back if any step fails
+            return False
 

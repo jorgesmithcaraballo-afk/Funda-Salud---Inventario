@@ -35,7 +35,9 @@ class DatabaseConfig:
             "host": cls.MYSQL_HOST,
             "user": cls.MYSQL_USER,
             "password": cls.MYSQL_PASSWORD,
-            "database": cls.MYSQL_DATABASE
+            "database": cls.MYSQL_DATABASE,
+            # Set connection timeout to prevent UI freezes when DB is unreachable
+            "connection_timeout": cls.CONNECTION_TIMEOUT,
         }
 
 

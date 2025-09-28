@@ -12,12 +12,12 @@ CREATE TABLE IF NOT EXISTS personal (
     tipo VARCHAR(10) NOT NULL DEFAULT 'user',
     PRIMARY KEY (id)
 );
-
 -- -----------------------------------------------------------------------------
 
 -- la tabla padre
 CREATE TABLE IF NOT EXISTS Inventario (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    -- codigo VARCHAR(50) NOT NULL UNIQUE, -- ya migrado en runtime, no forzamos aquí si el entorno aún no lo incluye
     descripcion_insumo VARCHAR(255),
     tipo VARCHAR(25),
     cantidad INT,
@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS Inventario (
     CREATE TABLE IF NOT EXISTS existencia_inicial (
         id INT AUTO_INCREMENT PRIMARY KEY,
         inventario_id INT, -- Clave foránea para referenciar a Inventario
-        nombre varchar(50),
+        cantidad INT,
+        costo DECIMAL(10, 2),
         FOREIGN KEY (inventario_id) REFERENCES Inventario(id)
     );
 
@@ -38,7 +39,8 @@ CREATE TABLE IF NOT EXISTS Inventario (
     CREATE TABLE IF NOT EXISTS entradas (
         id INT AUTO_INCREMENT PRIMARY KEY,
         inventario_id INT, -- Clave foránea para referenciar a Inventario
-        nombre varchar(50),
+        cantidad INT,
+        costo DECIMAL(10, 2),
         FOREIGN KEY (inventario_id) REFERENCES Inventario(id)
     );
 
@@ -46,7 +48,8 @@ CREATE TABLE IF NOT EXISTS Inventario (
     CREATE TABLE IF NOT EXISTS salidas (
         id INT AUTO_INCREMENT PRIMARY KEY,
         inventario_id INT, -- Clave foránea para referenciar a Inventario
-        nombre varchar(50),
+        cantidad INT,
+        costo DECIMAL(10, 2),
         FOREIGN KEY (inventario_id) REFERENCES Inventario(id)
     );
 
@@ -54,7 +57,8 @@ CREATE TABLE IF NOT EXISTS Inventario (
     CREATE TABLE IF NOT EXISTS existencia_final (
         id INT AUTO_INCREMENT PRIMARY KEY,
         inventario_id INT, -- Clave foránea para referenciar a Inventario
-        nombre varchar(50),
+        cantidad INT,
+        costo DECIMAL(10, 2),
         FOREIGN KEY (inventario_id) REFERENCES Inventario(id)
     );
 

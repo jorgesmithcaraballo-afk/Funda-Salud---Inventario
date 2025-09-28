@@ -31,6 +31,80 @@ class FiltroService:
         """Datos base usados por la vista Filtro (unificados desde InventoryQueries)."""
         return InventoryQueries.get_base_inventory_data()
 
+    # ------------------ Utilidades de filtrado/orden ------------------
+    @staticmethod
+    def filter_and_sort(
+        datos: List[Dict[str, Any]],
+        query_text: str,
+        category: str,
+    ) -> List[Dict[str, Any]]:
+        """Aplica filtrado por texto, filtro por categoría y orden.
+
+        No cambia la lógica existente en la vista: divide por ';', busca en 'codigo' o 'id' y 'descripcion_insumo',
+        filtra por categoría (excepto 'Todas') y ordena por 'id' ascendente cuando es posible.
+        """
+        try:
+            q = (query_text or "").strip().lower()
+            terminos = [t.strip() for t in q.split(";") if t.strip()]
+            if terminos:
+                tmp: List[Dict[str, Any]] = []
+                for item in datos:
+                    cod = str(item.get("codigo") or item.get("id") or "")
+                    cadena = f"{cod} {item.get('descripcion_insumo', '')}".lower()
+                    if any(termino in cadena for termino in terminos):
+                        tmp.append(item)
+                datos = tmp
+            if category and category.lower() != "todas":
+                datos = [it for it in datos if (it.get("categoria") or "General") == category]
+            try:
+                datos.sort(key=lambda r: r.get("id") or 0)
+            except Exception:
+                pass
+            return datos
+        except Exception:
+            return datos or []
+
+    @staticmethod
+    def get_filtered_inventory(query_text: str, category: str) -> List[Dict[str, Any]]:
+        """Obtiene datos base y aplica filtrado/ordenamiento centralizado."""
+        try:
+            base = FiltroService.get_base_inventory_data() or []
+            return FiltroService.filter_and_sort(base, query_text, category)
+        except Exception:
+            return []
+
+    @staticmethod
+    def prepare_export_data() -> List[Dict[str, Any]]:
+        """Devuelve los datos a exportar. Mantiene compatibilidad con exportación actual."""
+        try:
+            return FiltroService.get_base_inventory_data() or []
+        except Exception:
+            return []
+
+    # ------------------ Utilidades de paginación/render por lotes ------------------
+    @staticmethod
+    def paginate(
+        datos: List[Dict[str, Any]], start_index: int, batch_size: int
+    ) -> Tuple[List[Dict[str, Any]], int, bool]:
+        """Devuelve un lote de datos y el próximo índice.
+
+        Retorna: (batch, next_index, has_more)
+        - batch: sublista desde start_index con tamaño hasta batch_size
+        - next_index: índice siguiente para continuar
+        - has_more: True si quedan elementos por procesar
+        """
+        try:
+            n = len(datos) if datos is not None else 0
+            if n == 0 or start_index >= n or batch_size <= 0:
+                return [], start_index, False
+            end = min(start_index + batch_size, n)
+            batch = datos[start_index:end]
+            next_index = end
+            has_more = end < n
+            return batch, next_index, has_more
+        except Exception:
+            return [], start_index, False
+
     @staticmethod
     def load_inventario_codes_map() -> Tuple[
         List[str], List[str], Dict[str, Dict[str, Any]], Dict[str, str], Dict[str, str]
@@ -53,11 +127,14 @@ class FiltroService:
         desc_values: List[str] = []
         seen_desc: Dict[str, int] = {}
         for row in rows:
-            code = str(row.get("id"))
+            # Prefer business key 'codigo'; fallback to numeric id for legacy rows
+            code = str(row.get("codigo") or row.get("id"))
             desc = (row.get("descripcion_insumo") or "")
             cost = row.get("costo_unitario")
             cat = (row.get("categoria") or "General")
+            # This is the correct structure, as used by SubirView
             inventario_map[code] = {
+                "id": row.get("id"), # Pass the original ID for future queries
                 "descripcion_insumo": desc,
                 "costo_unitario": cost if (cost is not None) else "",
                 "categoria": cat,
@@ -65,22 +142,39 @@ class FiltroService:
             values.append(code)
             base_desc = desc.strip()
             if not base_desc:
-                label = f"(sin descripción) (ID:{code})"
+                label = f"(sin descripción) (COD:{code})"
             else:
                 if base_desc in seen_desc:
                     seen_desc[base_desc] += 1
-                    label = f"{base_desc} (ID:{code})"
+                    label = f"{base_desc} (COD:{code})"
                 else:
                     seen_desc[base_desc] = 1
                     label = base_desc
             desc_label_to_code[label] = code
             code_to_desc_label[code] = label
             desc_values.append(label)
+        # Sort descriptions alphabetically (case-insensitive)
+        desc_values.sort(key=str.lower)
+
+        # Sort codes using natural sorting (handles numbers correctly)
+        import re
+        def natural_sort_key(s):
+            return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', s)]
+        values.sort(key=natural_sort_key)
+
+        # The returned maps should not be lowercased here, the view will handle it.
+        # The view is responsible for lowercasing the keys for its own lookup map.
         return values, desc_values, inventario_map, desc_label_to_code, code_to_desc_label
 
     @staticmethod
     def fetch_inventory_by_code(code: str) -> Optional[Dict[str, Any]]:
-        row = InventarioCRUD.get_by_id(int(code))
+        # Try by business code first; fallback to id if numeric
+        row = InventarioCRUD.get_by_codigo(code)
+        if not row:
+            try:
+                row = InventarioCRUD.get_by_id(int(code))
+            except Exception:
+                row = None
         if not row:
             return None
         return {
@@ -101,24 +195,31 @@ class FiltroService:
         costo_mov: Optional[float],
     ) -> bool:
         """Guarda/actualiza Inventario y el movimiento asociado según categoría seleccionada."""
-        # Upsert Inventario
-        exists = InventarioCRUD.get_by_id(int(code))
+        # Upsert Inventario usando 'codigo' (clave de negocio)
+        exists = InventarioCRUD.get_by_codigo(code)
         if not exists:
-            InventarioCRUD.create(int(code), descripcion, costo_unitario, categoria_catalogo)
+            InventarioCRUD.create_with_codigo(code, descripcion, costo_unitario, categoria_catalogo)
+            # Obtener fila recién creada para resolver id
+            exists = InventarioCRUD.get_by_codigo(code)
         else:
-            InventarioCRUD.update(int(code), descripcion_insumo=descripcion, costo_unitario=costo_unitario, categoria=categoria_catalogo)
+            InventarioCRUD.update_by_codigo(code, descripcion_insumo=descripcion, costo_unitario=costo_unitario, categoria=categoria_catalogo)
 
-        # Movimiento
+        # Movimiento: requiere inventario_id (id PK)
         table_map = {
             "E. Inicial": ExistenciaInicialCRUD,
             "Entradas": EntradasCRUD,
             "Salidas": SalidasCRUD,
-            "E. Final": ExistenciaFinalCRUD,
         }
         crud = table_map.get(categoria_movimiento)
         if crud and cantidad is not None and costo_mov is not None:
+            try:
+                inv_id = int(exists.get("id")) if exists else int(code)  # fallback para compatibilidad
+            except Exception:
+                inv_id = None
+            if inv_id is None:
+                return False
             # Upsert por inventario_id
-            return bool(crud.upsert_by_inventario_id(int(code), float(cantidad), float(costo_mov)))
+            return bool(crud.upsert_by_inventario_id(inv_id, float(cantidad), float(costo_mov)))
         return True
 
     # ------------------ Exportación a Excel ------------------
@@ -153,7 +254,8 @@ class FiltroService:
                 cell.font = Font(bold=True)
 
         for item in datos:
-            codigo = str(item.get("id", ""))
+            # Preferir 'codigo' si está disponible en el dataset
+            codigo = str(item.get("codigo") or item.get("id", ""))
             descripcion = item.get("descripcion_insumo", "")
             costo_unitario = item.get("costo_unitario") or 0
             cant_inicial = item.get("ei_cant") or 0
