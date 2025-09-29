@@ -46,6 +46,6 @@ class QueryResult:
 class AIServiceConfig:
     """Configuration for AI service"""
     api_key: Optional[str] = None
-    model_name: str = "gemini-1.5-flash-8b"
+    model_name: str = "gemini-2.0-flash"
     max_response_length: int = 250
     is_configured: bool = False

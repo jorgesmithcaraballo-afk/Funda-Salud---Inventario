@@ -81,6 +81,37 @@ class InventoryQueries:
         return datos
     
     @staticmethod
+    def get_low_stock_products(threshold: int = 5) -> List[Dict]:
+        """Get products with low stock (0 < final existence <= threshold)."""
+        conn = obtener_conexion()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(
+            """
+            SELECT 
+                i.id,
+                i.codigo,
+                i.descripcion_insumo as producto,
+                i.costo_unitario,
+                (COALESCE(ei.cantidad, 0) + COALESCE(e.cantidad, 0) - COALESCE(s.cantidad, 0)) AS existencia_final,
+                ((COALESCE(ei.cantidad, 0) + COALESCE(e.cantidad, 0) - COALESCE(s.cantidad, 0)) * i.costo_unitario) AS monto_final
+            FROM Inventario i
+            LEFT JOIN existencia_inicial ei ON ei.inventario_id = i.id
+            LEFT JOIN entradas e ON e.inventario_id = i.id
+            LEFT JOIN salidas s ON s.inventario_id = i.id
+            HAVING existencia_final > 0 AND existencia_final <= %s
+            ORDER BY existencia_final ASC, i.descripcion_insumo ASC
+            LIMIT 10
+            """,
+            (threshold,)
+        )
+
+        datos = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return datos
+
+    @staticmethod
     def get_out_of_stock_products() -> List[Dict]:
         """Get products completely out of stock (final existence = 0)"""
         conn = obtener_conexion()
@@ -241,7 +272,7 @@ class InventoryQueries:
             """
             SELECT 
                 'TOTAL_SALIDAS' as tipo,
-                SUM(COALESCE(s.cantidad, 0) * COALESCE(s.costo, 0)) AS monto_total_salidas
+                COALESCE(SUM(COALESCE(s.cantidad, 0) * COALESCE(s.costo, 0)), 0) AS monto_total_salidas
             FROM salidas s
             WHERE s.cantidad > 0
             

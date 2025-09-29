@@ -28,8 +28,8 @@ CONFIGURACION_TITLE = "CONFIGURACIÓN"
 
 # Chat AI view
 CHAT_TITLE = "Asistente IA - Inventario"
-CHAT_STATUS_ACTIVE = "IA Activa"
-CHAT_STATUS_BASIC = "IA Básica"
+CHAT_STATUS_ACTIVE = "IA Activa 🟢"
+CHAT_STATUS_BASIC = "IA Desconectada 🔴"
 CHAT_INPUT_PLACEHOLDER = "Escribe el nombre del producto..."
 CHAT_SEND_BUTTON = "Enviar "
 CHAT_WELCOME = "¡Hola! Soy tu asistente de inventario"

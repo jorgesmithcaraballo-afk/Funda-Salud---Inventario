@@ -105,7 +105,7 @@ class ChatAIView(ctk.CTkFrame):
             toolbar.configure_buttons(show_chat=False, show_config=False)
         except Exception:
             pass
-        # Optional: show AI status below toolbar
+
         status_text = (
             CHAT_STATUS_ACTIVE
             if self._chat_controller.is_ai_configured()
@@ -114,10 +114,12 @@ class ChatAIView(ctk.CTkFrame):
         status_label = ctk.CTkLabel(
             self,
             text=status_text,
-            font=ctk.CTkFont(size=FONT_SM),
+            font=ctk.CTkFont(size=20),
             text_color=PRIMARY_BLUE,
+            height=24,
+            anchor="center",
         )
-        status_label.grid(row=1, column=0, sticky="e", padx=PADDING_XL, pady=(0, 4))
+        status_label.grid(row=1, column=0, sticky="e", padx=(16, 16), pady=(8, 8))
 
         # Grid Panel (Questions + Search)
         self._setup_grid_panel()
@@ -270,9 +272,13 @@ class ChatAIView(ctk.CTkFrame):
         )
         response_title.pack(anchor="w", padx=20, pady=(15, 10))
 
-        # Response text area (scrollable and expandable)
+        # Response text area container with vertical scrollbar
+        text_container = ctk.CTkFrame(response_frame, fg_color="transparent")
+        text_container.pack(fill="both", expand=True, padx=PADDING_XL, pady=(0, PADDING_XL))
+
+        # Create response textbox
         self.response_text = ctk.CTkTextbox(
-            response_frame,
+            text_container,
             height=RESPONSE_TEXT_HEIGHT,
             font=ctk.CTkFont(size=FONT_MD),
             fg_color=LIGHT_GRAY,
@@ -281,12 +287,19 @@ class ChatAIView(ctk.CTkFrame):
             border_color=GRAY,
             corner_radius=RADIUS_MD,
             wrap="word",
-            scrollbar_button_color=PRIMARY_BLUE,
-            scrollbar_button_hover_color=PRIMARY_BLUE_DARK,
         )
-        self.response_text.pack(
-            fill="both", expand=True, padx=PADDING_XL, pady=(0, PADDING_XL)
+
+        # Create vertical scrollbar and link with textbox
+        response_scrollbar = ctk.CTkScrollbar(
+            text_container,
+            orientation="vertical",
+            command=self.response_text.yview,
         )
+        self.response_text.configure(yscrollcommand=response_scrollbar.set)
+
+        # Pack textbox and scrollbar side by side
+        self.response_text.pack(side="left", fill="both", expand=True)
+        response_scrollbar.pack(side="right", fill="y")
 
         # Set initial message
         self._set_initial_message()
