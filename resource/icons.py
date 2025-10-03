@@ -1,48 +1,86 @@
 """
-Icon utilities: load and cache CTkImage icons from resource/img
+Centralized icons system for the application
 """
-from __future__ import annotations
 
-from functools import lru_cache
-from typing import Tuple
-from PIL import Image
-import customtkinter as ctk
-import os
+# Navigation icons
+ICON_HOME = "🏠"
+ICON_CHAT = "💬" 
+ICON_BACK = "◀"  # Better centered back arrow
+ICON_TOOLS = "🛠️"
+ICON_UPLOAD = "⬆️"
 
-# Base path for icons
-ICON_DIR = os.path.join(os.path.dirname(__file__), "img")
+# Status icons
+ICON_SUCCESS = "✅"
+ICON_ERROR = "❌"
+ICON_WARNING = "⚠️"
+ICON_INFO = "ℹ️"
+ICON_LOADING = "🔄"
 
-# Map logical names to filenames
-ICON_MAP = {
-    "arrow_back": "arrow_back.png",
-    "chat": "chat.png",
-    "settings": "settings.png",
-    "check_circle": "check_circle.png",
-    "home": "home.png",
-    "report": "report.png",
-    "update": "update.png",
-    "logo": "logo.png",
-}
+# Action icons
+ICON_SAVE = "💾"
+ICON_EXPORT = "📊"
+ICON_SEARCH = "🔍"
+ICON_FILTER = "🔍"
+ICON_SEND = "📤"
+ICON_PLUS = "➕"
+ICON_MINUS = "➖"
 
+# Database icons
+ICON_DATABASE = "🗄️"
+ICON_TABLE = "📋"
+ICON_USER = "👤"
+ICON_USERS = "👥"
 
-def _icon_path(name: str) -> str:
-    filename = ICON_MAP.get(name)
-    if not filename:
-        raise ValueError(f"Icon '{name}' not found in ICON_MAP")
-    path = os.path.join(ICON_DIR, filename)
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"Icon file not found: {path}")
-    return path
+# System icons
+ICON_SETTINGS = "⚙️"
+ICON_CONFIG = "🔧"
+ICON_LOCK = "🔒"
+ICON_UNLOCK = "🔓"
+ICON_KEY = "🔑"
 
+# Medical/Health icons (for Fundación Salud)
+ICON_HEALTH = "🏥"
+ICON_MEDICAL = "⚕️"
+ICON_MEDICINE = "💊"
 
-@lru_cache(maxsize=64)
-def get_icon(name: str, size: Tuple[int, int] = (28, 28)) -> ctk.CTkImage:
-    """Return a cached CTkImage for the given icon name and size.
+# File icons
+ICON_FILE = "📄"
+ICON_FOLDER = "📁"
+ICON_EXCEL = "📊"
 
-    Parameters:
-        name: Logical icon name (see ICON_MAP)
-        size: (width, height) in pixels
-    """
-    path = _icon_path(name)
-    img = Image.open(path)
-    return ctk.CTkImage(light_image=img, size=size)
+# UI Elements
+ICON_MENU = "☰"
+ICON_CLOSE = "✕"
+ICON_MINIMIZE = "−"
+ICON_MAXIMIZE = "□"
+ICON_FULLSCREEN = "⛶"
+
+# Advanced arrows (better than ←)
+ICON_BACK_ARROW = "◀"     # Main back arrow
+ICON_BACK_ALT = "◄"       # Alternative back arrow  
+ICON_FORWARD = "▶"        # Forward arrow
+ICON_UP = "▲"             # Up arrow
+ICON_DOWN = "▼"           # Down arrow
+ICON_LEFT = "◀"           # Left arrow
+ICON_RIGHT = "▶"          # Right arrow
+
+# Status indicators
+ICON_ONLINE = "🟢"
+ICON_OFFLINE = "🔴"
+ICON_PENDING = "🟡"
+ICON_ACTIVE = "🟢"
+ICON_INACTIVE = "⚪"
+
+# Helper function to get consistent icon style
+def get_icon_with_text(icon, text="", spacing=" "):
+    """Get icon with optional text, properly spaced"""
+    if text:
+        return f"{icon}{spacing}{text}"
+    return icon
+
+# Common icon combinations
+ICON_LOGIN = get_icon_with_text("🔐", "")
+ICON_LOGOUT = get_icon_with_text("🚪", "")
+ICON_INVENTORY = get_icon_with_text("📦", "")
+ICON_REPORTS = get_icon_with_text("📊", "")
+ICON_AI_CHAT = get_icon_with_text("🤖", "")

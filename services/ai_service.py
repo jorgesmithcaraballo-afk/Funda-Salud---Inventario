@@ -395,7 +395,7 @@ class InventoryAIService:
         return ResponseFormatter.format(data, user_prompt, query_type)
     
     def search_specific_product(self, search_term: str) -> QueryResult:
-        """Search for a specific product by Código (business code) or description using InventoryQueries"""
+        """Search for a specific product by ID or description using InventoryQueries"""
         start_time = time.time()
         
         try:
@@ -405,7 +405,7 @@ class InventoryAIService:
                 return QueryResult(
                     success=False,
                     data=[],
-                    error_message="❌ Debe ingresar un Código o descripción de producto"
+                    error_message="❌ Debe ingresar un ID o descripción de producto"
                 )
             
             sql_data = InventoryQueries.search_product(search_term)
@@ -455,7 +455,7 @@ class InventoryAIService:
             
             response = f"""📋 Ficha Detallada: {product['producto']}
 
-🆔 Código: {product.get('codigo', product.get('id'))}
+🆔 ID: C-{product['id']}
 💰 Costo Unitario: ${product['costo_unitario']:.2f}
 
 📊 Movimientos:
@@ -473,10 +473,9 @@ class InventoryAIService:
             
             for i, product in enumerate(data, 1):
                 status = "✅ Disponible" if product['cant_final'] > 0 else "❌ Agotado"
-                code = product.get('codigo', product.get('id'))
-                response += f"• {product['producto']} (Código: {code})\n  Stock: {product['cant_final']} unidades - {status}\n\n"
+                response += f"• {product['producto']} (ID: C-{product['id']})\n  Stock: {product['cant_final']} unidades - {status}\n\n"
             
-            response += "💡 Tip: Busca por Código específico para ver detalles completos"
+            response += "💡 Tip: Busca por ID específico para ver detalles completos"
         
         return response
 

@@ -20,7 +20,6 @@ class InventoryQueries:
             """
             SELECT 
                 i.id,
-                i.codigo,
                 i.descripcion_insumo,
                 i.categoria,
                 i.costo_unitario,
@@ -36,45 +35,39 @@ class InventoryQueries:
             LEFT JOIN salidas s ON s.inventario_id = i.id
             """
         )
+
         datos = cursor.fetchall()
         cursor.close()
         conn.close()
         return datos
-
+    
     @staticmethod
-    def search_product_by_codigo(codigo: str) -> List[Dict]:
-        """Search specific product by business code (codigo)"""
+    def get_low_stock_products(threshold: int = 5) -> List[Dict]:
+        """Get products with low stock (final existence <= threshold)"""
         conn = obtener_conexion()
         cursor = conn.cursor(dictionary=True)
-
+        
         cursor.execute(
-            """
+            f"""
             SELECT 
                 i.id,
-                i.codigo,
                 i.descripcion_insumo as producto,
                 i.costo_unitario,
                 COALESCE(ei.cantidad, 0) AS cant_inicial,
-                COALESCE(ei.costo, 0) AS costo_inicial,
-                (COALESCE(ei.cantidad, 0) * COALESCE(ei.costo, 0)) AS monto_inicial,
                 COALESCE(e.cantidad, 0) AS cant_entrada,
-                COALESCE(e.costo, 0) AS costo_entrada,
-                (COALESCE(e.cantidad, 0) * COALESCE(e.costo, 0)) AS monto_entrada,
                 COALESCE(s.cantidad, 0) AS cant_salida,
-                COALESCE(s.costo, 0) AS costo_salida,
-                (COALESCE(s.cantidad, 0) * COALESCE(s.costo, 0)) AS monto_salida,
-                (COALESCE(ei.cantidad, 0) + COALESCE(e.cantidad, 0) - COALESCE(s.cantidad, 0)) AS cant_final,
+                (COALESCE(ei.cantidad, 0) + COALESCE(e.cantidad, 0) - COALESCE(s.cantidad, 0)) AS existencia_final,
                 ((COALESCE(ei.cantidad, 0) + COALESCE(e.cantidad, 0) - COALESCE(s.cantidad, 0)) * i.costo_unitario) AS monto_final
             FROM Inventario i
             LEFT JOIN existencia_inicial ei ON ei.inventario_id = i.id
             LEFT JOIN entradas e ON e.inventario_id = i.id
             LEFT JOIN salidas s ON s.inventario_id = i.id
-            WHERE i.codigo = %s
-            LIMIT 1
-            """,
-            (codigo,)
+            HAVING existencia_final <= {threshold} AND existencia_final > 0
+            ORDER BY existencia_final ASC
+            LIMIT 10
+            """
         )
-
+        
         datos = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -90,7 +83,6 @@ class InventoryQueries:
             """
             SELECT 
                 i.id,
-                i.codigo,
                 i.descripcion_insumo as producto,
                 i.costo_unitario,
                 (COALESCE(ei.cantidad, 0) + COALESCE(e.cantidad, 0) - COALESCE(s.cantidad, 0)) AS existencia_final,
@@ -156,7 +148,6 @@ class InventoryQueries:
         cursor.execute(
             """
             SELECT 
-                i.codigo,
                 i.descripcion_insumo as producto,
                 COALESCE(e.cantidad, 0) AS cant_entrada,
                 (COALESCE(e.cantidad, 0) * COALESCE(e.costo, 0)) AS monto_entrada
@@ -182,7 +173,6 @@ class InventoryQueries:
         cursor.execute(
             """
             SELECT 
-                i.codigo,
                 i.descripcion_insumo as producto,
                 COALESCE(s.cantidad, 0) AS cant_salida,
                 (COALESCE(s.cantidad, 0) * COALESCE(s.costo, 0)) AS monto_salida
@@ -273,7 +263,6 @@ class InventoryQueries:
             """
             SELECT 
                 i.id,
-                i.codigo,
                 i.descripcion_insumo as producto,
                 COALESCE(ei.cantidad, 0) AS cant_inicial,
                 COALESCE(e.cantidad, 0) AS cant_entrada,
@@ -303,7 +292,6 @@ class InventoryQueries:
         cursor.execute(
             """
             SELECT 
-                i.codigo,
                 i.descripcion_insumo as producto,
                 COALESCE(ei.cantidad, 0) AS cant_inicial,
                 (COALESCE(ei.cantidad, 0) + COALESCE(e.cantidad, 0) - COALESCE(s.cantidad, 0)) AS cant_final,
@@ -423,17 +411,9 @@ class InventoryQueries:
     def search_product(search_term: str) -> List[Dict]:
         """Smart product search - tries ID first, then description"""
         search_term = search_term.strip()
-        # 1) Try exact codigo match first
-        by_code = InventoryQueries.search_product_by_codigo(search_term)
-        if by_code:
-            return by_code
-        # 2) If numeric, try by id
+        
         try:
             product_id = int(search_term)
-            by_id = InventoryQueries.search_product_by_id(product_id)
-            if by_id:
-                return by_id
+            return InventoryQueries.search_product_by_id(product_id)
         except ValueError:
-            pass
-        # 3) Fallback to description contains
-        return InventoryQueries.search_product_by_description(search_term)
+            return InventoryQueries.search_product_by_description(search_term)
