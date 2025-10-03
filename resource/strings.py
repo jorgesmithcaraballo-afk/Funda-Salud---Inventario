@@ -51,16 +51,10 @@ FILTRO_EXCEL_HEADERS = [
 SUBIR_TITLE = "AGREGAR TRABAJO"
 
 # Chat AI view
-<<<<<<< HEAD
 
 CHAT_TITLE = "🤖 Asistente IA - Inventario"
 CHAT_STATUS_ACTIVE = "🟢 IA Activa"
 CHAT_STATUS_BASIC = "🟡 IA Básica"
-=======
-CHAT_TITLE = "Asistente IA - Inventario"
-CHAT_STATUS_ACTIVE = "IA Activa 🟢"
-CHAT_STATUS_BASIC = "IA Desconectada 🔴"
->>>>>>> 8c5d0af51849da07e85aee72fdedd9fd0f0009f3
 CHAT_INPUT_PLACEHOLDER = "Escribe el nombre del producto..."
 CHAT_SEND_BUTTON = "Enviar 📤"
 CHAT_WELCOME = "¡Hola! 👋 Soy tu asistente de inventario"

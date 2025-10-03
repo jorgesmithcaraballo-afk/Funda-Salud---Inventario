@@ -69,7 +69,6 @@ class ChatAIView(ctk.CTkFrame):
             command=self.go_back,
             **back_button_style
         )
-<<<<<<< HEAD
         self.back_button.pack(side="left", anchor="w")
         
         # Title
@@ -78,18 +77,6 @@ class ChatAIView(ctk.CTkFrame):
             text="🤖 Asistente IA - Inventario",
             font=ctk.CTkFont(size=20, weight="bold"),
             text_color=HEADER_TEXT
-=======
-        toolbar.grid(row=0, column=0, sticky="ew")
-        try:
-            toolbar.configure_buttons(show_chat=False, show_config=False)
-        except Exception:
-            pass
-
-        status_text = (
-            CHAT_STATUS_ACTIVE
-            if self._chat_controller.is_ai_configured()
-            else CHAT_STATUS_BASIC
->>>>>>> 8c5d0af51849da07e85aee72fdedd9fd0f0009f3
         )
         title_label.pack(side="left", expand=True, padx=(20, 0))
         
@@ -98,21 +85,11 @@ class ChatAIView(ctk.CTkFrame):
         status_label = ctk.CTkLabel(
             header_content,
             text=status_text,
-<<<<<<< HEAD
             font=ctk.CTkFont(size=12),
             text_color=HEADER_TEXT
         )
         status_label.pack(side="right")
         
-=======
-            font=ctk.CTkFont(size=20),
-            text_color=PRIMARY_BLUE,
-            height=24,
-            anchor="center",
-        )
-        status_label.grid(row=1, column=0, sticky="e", padx=(16, 16), pady=(8, 8))
-
->>>>>>> 8c5d0af51849da07e85aee72fdedd9fd0f0009f3
         # Grid Panel (Questions + Search)
         self._setup_grid_panel()
         
@@ -249,53 +226,23 @@ class ChatAIView(ctk.CTkFrame):
             text_color=PRIMARY_BLUE
         )
         response_title.pack(anchor="w", padx=20, pady=(15, 10))
-<<<<<<< HEAD
         
         # Response text area (scrollable and expandable)
         self.response_text = ctk.CTkTextbox(
             response_frame,
             height=350,
             font=ctk.CTkFont(size=13),
-=======
-
-        # Response text area container with vertical scrollbar
-        text_container = ctk.CTkFrame(response_frame, fg_color="transparent")
-        text_container.pack(fill="both", expand=True, padx=PADDING_XL, pady=(0, PADDING_XL))
-
-        # Create response textbox
-        self.response_text = ctk.CTkTextbox(
-            text_container,
-            height=RESPONSE_TEXT_HEIGHT,
-            font=ctk.CTkFont(size=FONT_MD),
->>>>>>> 8c5d0af51849da07e85aee72fdedd9fd0f0009f3
             fg_color=LIGHT_GRAY,
             text_color=PRIMARY_BLUE_DARK,
             border_width=1,
             border_color=INPUT_BORDER,
             corner_radius=8,
             wrap="word",
-<<<<<<< HEAD
             scrollbar_button_color=PRIMARY_BLUE,
             scrollbar_button_hover_color=PRIMARY_BLUE_DARK
         )
         self.response_text.pack(fill="both", expand=True, padx=20, pady=(0, 20))
         
-=======
-        )
-
-        # Create vertical scrollbar and link with textbox
-        response_scrollbar = ctk.CTkScrollbar(
-            text_container,
-            orientation="vertical",
-            command=self.response_text.yview,
-        )
-        self.response_text.configure(yscrollcommand=response_scrollbar.set)
-
-        # Pack textbox and scrollbar side by side
-        self.response_text.pack(side="left", fill="both", expand=True)
-        response_scrollbar.pack(side="right", fill="y")
-
->>>>>>> 8c5d0af51849da07e85aee72fdedd9fd0f0009f3
         # Set initial message
         self._set_initial_message()
     
