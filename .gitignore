@@ -1,4 +1,128 @@
+# ----------------------------------------
+# Archivos y carpetas de Python
+# ----------------------------------------
 __pycache__/
-*.pyc
-.DS_Store
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.pdb
+
+# Archivos compilados y binarios
+*.so
+*.dll
+*.exe
+*.exe.manifest
+*.spec
+*.bin
+
+# ----------------------------------------
+# Entornos virtuales
+# ----------------------------------------
 .venv/
+venv/
+env/
+ENV/
+env.bak/
+
+# ----------------------------------------
+# Distribuciones y builds
+# ----------------------------------------
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ----------------------------------------
+# Archivos de logs y debugging
+# ----------------------------------------
+*.log
+*.pot
+*.po
+*.mo
+
+# ----------------------------------------
+# Configuración del sistema / IDE
+# ----------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.spyproject/
+*.sublime-project
+*.sublime-workspace
+
+# ----------------------------------------
+# Configuración de PyInstaller
+# (mantiene limpio el repo si generas .exe)
+# ----------------------------------------
+# Archivos temporales generados por PyInstaller
+# Incluye ficheros intermedios y metadata
+*.manifest
+*.spec
+# Carpeta temporal usada para compilaciones
+__pyinstaller/
+# Directorios de salida (por defecto)
+build/
+dist/
+
+# ----------------------------------------
+# Archivos de cifrado o secretos
+# ----------------------------------------
+*.key
+*.pem
+*.enc
+*.cer
+*.crt
+*.pfx
+secrets.json
+.env
+.env.*
+
+# ----------------------------------------
+# Otros formatos que no deberían versionarse
+# ----------------------------------------
+*.bak
+*.tmp
+*.swp
+*.old
+*.orig
+*.msg
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.rar
+
+# ----------------------------------------
+# Carpetas de datos generados por ejecución
+# ----------------------------------------
+logs/
+output/
+data/
+temp/
+tmp/
+cache/
+__output__/
+
+# ----------------------------------------
+# Jupyter / notebooks (si aplica)
+# ----------------------------------------
+.ipynb_checkpoints
+profile_default/
+ipython_config.py
+
+# ----------------------------------------
+# Configuración opcional (PyCharm, etc.)
+# ----------------------------------------
+.idea/
