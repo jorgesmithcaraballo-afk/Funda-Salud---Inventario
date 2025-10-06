@@ -108,10 +108,10 @@ class ConfiguracionView(ctk.CTkFrame):
     def go_back(self) -> None:
         """Go back to previous view"""
         try:
-            print(f"🔙 Regresando a vista: {self.previous_view}")
+            logging.getLogger(__name__).info("Regresando a vista: %s", self.previous_view)
             self.controlador.mostrar_vista(self.previous_view)
         except Exception as e:
-            print(f"❌ Error regresando a vista anterior: {e}")
+            logging.getLogger(__name__).error("Error regresando a vista anterior: %s", e)
             # Fallback to filtro
             self.controlador.mostrar_vista("filtro")
 

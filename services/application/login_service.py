@@ -11,7 +11,7 @@ import hashlib
 import os
 import logging
 
-from db.crud.personal_crud_service import PersonalCRUD
+from database.personal_crud_service import PersonalCRUD
 
 
 logger = logging.getLogger(__name__)

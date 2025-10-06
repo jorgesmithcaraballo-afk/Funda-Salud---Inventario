@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import hashlib
 import os
 
-from db.crud.personal_crud_service import PersonalCRUD
+from database.personal_crud_service import PersonalCRUD
 from services.domain.category_service import CategoryService
 
 

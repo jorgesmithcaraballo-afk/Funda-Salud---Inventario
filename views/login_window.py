@@ -9,10 +9,16 @@ from tkinter import messagebox
 from typing import Any, Optional
 from services.application.login_service import LoginService
 import re
+import sys
 
-
-LOGO_PATH = os.path.join("img", "logo.png")
-
+def get_resource_path(relative_path):
+   """Obtiene la ruta absoluta al recurso, funciona en desarrollo y .exe"""
+   try:
+       # PyInstaller crea una carpeta temporal y guarda la ruta en _MEIPASS
+       base_path = sys._MEIPASS
+   except Exception:
+       base_path = os.path.abspath(".")
+   return os.path.join(base_path, relative_path)
 
 class LoginView(ctk.CTkFrame):
     # --- Configuración de logging ---
@@ -231,14 +237,17 @@ class LoginView(ctk.CTkFrame):
 
     def _build_logo(self) -> None:
         try:
-            logo_big = ctk.CTkImage(Image.open(LOGO_PATH), size=(250, 250))
+            logo_path = get_resource_path("app_resources/img/logo.png")
+            logo_big = ctk.CTkImage(Image.open(logo_path), size=(250, 250))
             ctk.CTkLabel(self.logo_panel, image=logo_big, text="").place(
                 relx=0.5, rely=0.5, anchor="center"
             )
-        except Exception:
+        except Exception as e:
+            print("Error cargando logo:", e)
             ctk.CTkLabel(self.logo_panel, text="(logo)").place(
                 relx=0.5, rely=0.5, anchor="center"
             )
+
 
     def _bind_events(self) -> None:
         # Enter para enviar

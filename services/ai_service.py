@@ -207,7 +207,7 @@ class InventoryAIService:
         """Initialize Google Gemini AI model"""
         try:
             genai.configure(api_key=api_key)
-            self._model = genai.GenerativeModel('gemini-1.5-flash-8b')
+            self._model = genai.GenerativeModel('gemini-2.0-flash')
         except Exception as e:
             print(f"⚠️ AI no disponible: {e}")
             self._config.is_configured = False

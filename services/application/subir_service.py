@@ -9,10 +9,10 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 from services.application.filtro_service import FiltroService
-from db.crud.existencia_inicial_crud_service import ExistenciaInicialCRUD
-from db.crud.entradas_crud_service import EntradasCRUD
-from db.crud.salidas_crud_service import SalidasCRUD
-from db.crud.existencia_final_crud_service import ExistenciaFinalCRUD
+from database.existencia_inicial_crud_service import ExistenciaInicialCRUD
+from database.entradas_crud_service import EntradasCRUD
+from database.salidas_crud_service import SalidasCRUD
+from database.existencia_final_crud_service import ExistenciaFinalCRUD
 
 
 class SubirService:

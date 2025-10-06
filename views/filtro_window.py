@@ -551,39 +551,43 @@ class FiltroView(ctk.CTkFrame):
         threading.Thread(target=_worker, daemon=True).start()
 
     # -------- Auto refresh helpers --------
-    # def _restart_auto_refresh(self) -> None:
-    #     self._cancel_auto_refresh()
-    #     self._schedule_auto_refresh(delay=1000)
+    def _restart_auto_refresh(self) -> None:
+        self._cancel_auto_refresh()
+        self._schedule_auto_refresh(delay=1000)
 
-    # def _schedule_auto_refresh(self, delay: int = None) -> None:
-    #     try:
-    #         d = self._auto_refresh_ms if delay is None else delay
-    #         self._auto_job = self.after(d, self._auto_refresh_tick)
-    #     except Exception:
-    #         self._auto_job = None
+    def _schedule_auto_refresh(self, delay: int = None) -> None:
+        try:
+            d = self._auto_refresh_ms if delay is None else delay
+            self._auto_job = self.after(d, self._auto_refresh_tick)
+        except Exception:
+            self._auto_job = None
 
-    # def _cancel_auto_refresh(self) -> None:
-    #     try:
-    #         if self._auto_job is not None:
-    #             self.after_cancel(self._auto_job)
-    #     except Exception:
-    #         pass
-    #     self._auto_job = None
+    def _cancel_auto_refresh(self) -> None:
+        try:
+            if self._auto_job is not None:
+                self.after_cancel(self._auto_job)
+        except Exception:
+            pass
+        self._auto_job = None
 
-    # def _auto_refresh_tick(self) -> None:
-    #     try:
-    #         # Si la vista no está visible, reprogramar sin recargar
-    #         if not self.winfo_ismapped():
-    #             self._schedule_auto_refresh()
-    #             return
-    #         # Relanzar carga con el último filtro y categoría actual
-    #         self._show_loading()
-    #         self._load_token = getattr(self, '_load_token', 0) + 1
-    #         categoria_sel = (self.select_space.get() or 'Todas').strip()
-    #         self._load_inventory_async(query_text=self._last_query_text, category=categoria_sel, token=self._load_token)
-    #     finally:
-    #         # Programar próximo ciclo
-    #         self._schedule_auto_refresh()
+    def _auto_refresh_tick(self) -> None:
+        try:
+            # Si la vista no está visible, reprogramar sin recargar
+            if not self.winfo_ismapped():
+                self._schedule_auto_refresh()
+                return
+            # Relanzar carga con el último filtro y categoría actual
+            self._show_loading()
+            self._load_token = getattr(self, '_load_token', 0) + 1
+            categoria_sel = (self.select_space.get() or 'Todas').strip()
+            self._load_inventory_async(
+                query_text=self._last_query_text,
+                category=categoria_sel,
+                token=self._load_token,
+            )
+        finally:
+            # Programar próximo ciclo
+            self._schedule_auto_refresh()
 
     # --- Control de visibilidad de admin ---
     def update_admin_visibility(self) -> None:

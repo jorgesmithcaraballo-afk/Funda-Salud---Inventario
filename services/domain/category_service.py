@@ -6,7 +6,7 @@ CategoryService: centralized access to categories for all views.
 from __future__ import annotations
 
 from typing import List
-from db.crud.categorias_crud_service import CategoriasCRUD
+from database.categorias_crud_service import CategoriasCRUD
 
 
 class CategoryService:
